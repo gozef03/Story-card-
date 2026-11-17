@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Cards</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#2b221c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Story Cards">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* A storyteller's desk: one parchment comic panel (the stage), the story written underneath, your cards at the bottom. Everything is ink on paper. */
+  --desk:#2b221c;
+  --desk-2:#3a2e26;
+  --paper:#f3e6cb;
+  --paper-2:#e8d6b3;
+  --ink:#4a3426;
+  --gold:#e3bd58;
+  --muted:#c9b89b;
+  --c-place:#5f9284;
+  --c-character:#c4673f;
+  --c-object:#b98d2f;
+  --c-action:#7a64a6;
+  --c-feeling:#b85c79;
+  --c-phrase:#3f7a9e;
+  --c-vocab:#8a5a9e;
+  --display:"Patrick Hand", "Comic Sans MS", cursive;
+  --body:"Lexend", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--desk);color:var(--paper);font-family:var(--body);overflow:hidden;-webkit-tap-highlight-color:transparent;
+  background-image:radial-gradient(ellipse at 50% 0%,rgba(255,220,160,.07),transparent 60%)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.app{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto}
+
+.bar{display:flex;align-items:center;gap:8px;padding:8px 16px 6px}
+.brand{font-family:var(--display);font-weight:400;font-size:28px;line-height:1;margin:0;flex:1;white-space:nowrap;color:var(--paper);letter-spacing:.01em}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1.5px solid #5a4636;background:var(--desk-2);border-radius:999px;padding:5px 10px;font-size:12.5px;color:var(--muted)}
+.chip b{color:var(--paper);font-variant-numeric:tabular-nums;font-weight:600}
+.iconbtn{border:1.5px solid #5a4636;background:var(--desk-2);border-radius:999px;padding:5px 10px;font-size:13px}
+.iconbtn[aria-pressed="false"]{opacity:.45}
+
+/* the comic panel */
+.stage-wrap{padding:0 16px}
+.stage{position:relative;height:min(38vh,320px);min-height:210px;overflow:hidden;background:var(--paper);
+  border:3px solid #1e1712;border-radius:5px;box-shadow:0 5px 0 #17110d,0 12px 30px rgba(0,0,0,.4);transition:box-shadow .2s}
+.stage.drop-ok{box-shadow:0 0 0 4px var(--gold),0 5px 0 #17110d,0 0 30px rgba(227,189,88,.45)}
+.scene{position:absolute;inset:0;clip-path:circle(0% at 50% 100%);transition:clip-path 1.3s cubic-bezier(.6,.05,.25,1)}
+.stage.open .scene{clip-path:circle(140% at 50% 100%)}
+.scene svg.bg{width:100%;height:100%;display:block}
+.marquee{position:absolute;inset:0;z-index:6;display:grid;place-items:center;text-align:center;pointer-events:none;transition:opacity .5s;
+  background:repeating-linear-gradient(0deg,transparent 0 23px,rgba(74,52,38,.08) 23px 24px)}
+.marquee p{margin:0;font-family:var(--display);font-size:30px;line-height:1.1;color:var(--ink);text-wrap:balance;padding:0 24px}
+.marquee p span{display:block;font-size:19px;opacity:.75;margin-top:6px}
+.stage.open .marquee{opacity:0}
+.caption{position:absolute;z-index:5;top:8px;left:8px;background:#fbf3df;color:var(--ink);border:2px solid var(--ink);padding:2px 9px 3px;
+  font-family:var(--display);font-size:17px;line-height:1.1;box-shadow:2px 2px 0 rgba(74,52,38,.35);max-width:70%}
+.caption:empty{display:none}
+
+.thing{position:absolute;bottom:10%;transform:translateX(-50%);width:86px;height:103px;z-index:2;
+  display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;
+  transition:left .9s cubic-bezier(.5,0,.3,1),bottom .9s cubic-bezier(.5,0,.3,1)}
+.thing.prop{width:62px;height:74px}
+.thing .em{display:block;width:100%;height:100%;transform-origin:50% 100%;animation:breathe 3s ease-in-out infinite}
+.thing .em svg{width:100%;height:100%;overflow:visible;display:block}
+.thing.prop .em{animation:none}
+.thing .name{font-family:var(--display);font-size:14px;line-height:1;color:var(--ink);background:#fbf3df;border:1.5px solid var(--ink);border-radius:999px;padding:1px 7px 2px;margin-top:-4px;white-space:nowrap}
+.thing.enter{animation:enter .6s cubic-bezier(.3,1.5,.5,1) both}
+svg .blink{animation:blink 4.2s infinite;transform-box:fill-box;transform-origin:center}
+svg .flame{animation:flicker .35s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
+svg .spark{animation:sparkle 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+svg .bubble{animation:pop .4s cubic-bezier(.3,1.5,.5,1) both;transform-box:fill-box;transform-origin:0 100%}
+.zzz{font-family:var(--display);font-size:18px;fill:var(--ink);animation:zz 2s ease-in-out infinite}
+.zzz.small{font-size:13px;animation-delay:.5s}
+.bang{font-family:var(--display);font-size:15px;fill:var(--ink)}
+
+/* actions */
+.thing.a-eat{animation:goEat 1s ease-in-out}
+.thing.a-run{animation:run 1.2s ease-in-out}
+.thing.a-jump{animation:jump .9s ease-out}
+.thing.a-play{animation:wiggle .9s ease-in-out}
+.thing.a-read{animation:nod 1.2s ease-in-out}
+.thing.a-feel{animation:hop .5s ease-out}
+.thing.a-sing{animation:hop .45s ease-out 3}
+.thing.a-hide{animation:hideK 1.2s ease-in-out}
+.thing.a-hug{animation:wiggle .5s ease-in-out 2}
+.thing.a-fly{animation:flyK 1.2s ease-out}
+.thing.a-climb{animation:climbK 1s ease-in-out}
+.thing.a-swim{animation:swimK 1.2s ease-in-out 2}
+.thing.a-dig{animation:digK .25s linear 5}
+.thing.gobble{animation:gobble .55s ease-in .45s both}
+.thing.vanish{animation:gobble .6s ease-in both}
+.thing.spin .em{animation:spin .9s linear}
+.stage.shake{animation:shake .4s}
+
+@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.015,.985)}}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+@keyframes flicker{from{transform:scale(1,1)}to{transform:scale(.85,1.12)}}
+@keyframes sparkle{0%,100%{transform:scale(.6);opacity:.4}50%{transform:scale(1.15);opacity:1}}
+@keyframes enter{0%{transform:translate(-50%,-90px) scale(.5);opacity:0}60%{transform:translate(-50%,0) scale(1.08,.9);opacity:1}100%{transform:translate(-50%,0) scale(1)}}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes zz{0%,100%{transform:translate(0,0);opacity:.35}50%{transform:translate(-4px,-6px);opacity:1}}
+@keyframes hop{0%,100%{transform:translate(-50%,0) scale(1)}30%{transform:translate(-50%,0) scale(1.06,.92)}60%{transform:translate(-50%,-12px) scale(.96,1.06)}}
+@keyframes goEat{0%,100%{transform:translateX(-50%)}15%{transform:translateX(calc(-50% - 8px)) scale(1.04,.94)}45%,62%{transform:translateX(calc(-50% + var(--dx,0px)))}55%{transform:translateX(calc(-50% + var(--dx,0px))) scale(1.08,.92)}}
+@keyframes run{0%,100%{transform:translateX(-50%)}10%{transform:translateX(calc(-50% - 10px)) scale(1.05,.94)}35%{transform:translateX(calc(-50% + 140px)) scaleX(1)}36%{transform:translateX(calc(-50% + 140px)) scaleX(-1)}72%{transform:translateX(calc(-50% - 40px)) scaleX(-1)}73%{transform:translateX(calc(-50% - 40px)) scaleX(1)}}
+@keyframes jump{0%,100%{transform:translate(-50%,0)}15%{transform:translate(-50%,0) scale(1.12,.85)}45%{transform:translate(-50%,-72px) scale(.92,1.1) rotate(-6deg)}75%{transform:translate(-50%,0) scale(1.12,.88)}}
+@keyframes wiggle{0%,100%{transform:translateX(-50%) rotate(0)}25%{transform:translateX(-50%) rotate(-10deg)}75%{transform:translateX(-50%) rotate(10deg)}}
+@keyframes nod{0%,100%{transform:translateX(-50%) rotate(0)}30%,70%{transform:translateX(-50%) rotate(7deg) translateY(3px)}}
+@keyframes hideK{0%,100%{transform:translateX(-50%) scale(1)}35%,70%{transform:translateX(-50%) scale(.75,.55)}}
+@keyframes flyK{0%{transform:translate(-50%,60px) rotate(-10deg)}60%{transform:translate(-50%,-14px) rotate(8deg)}100%{transform:translate(-50%,0)}}
+@keyframes climbK{0%{transform:translate(-50%,60px)}25%{transform:translate(-50%,40px) rotate(-8deg)}50%{transform:translate(-50%,24px) rotate(8deg)}75%{transform:translate(-50%,10px) rotate(-8deg)}100%{transform:translate(-50%,0)}}
+@keyframes swimK{0%,100%{transform:translate(-50%,0) rotate(0)}50%{transform:translate(-50%,-10px) rotate(-10deg)}}
+@keyframes digK{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,4px) rotate(-14deg)}}
+@keyframes gobble{to{transform:translateX(-50%) scale(0) rotate(40deg);opacity:0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* weather and light */
+.sky{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:0;transition:opacity 1s,background 1s}
+.sky.night{opacity:1;background:rgba(28,22,52,.58)}
+.sky.lamp{opacity:1;background:radial-gradient(circle at 84% 55%,rgba(255,214,120,.45),rgba(255,214,120,.1) 35%,rgba(28,22,52,.42) 70%)}
+.sky.rain{opacity:1;background-color:rgba(70,80,90,.28)}
+.sky.rain::before{content:"";position:absolute;inset:-40px 0 0;background:repeating-linear-gradient(100deg,transparent 0 13px,rgba(74,52,38,.45) 13px 14.5px);background-size:100% 40px;animation:rain .45s linear infinite}
+@keyframes rain{to{transform:translateY(40px)}}
+
+/* ink particles */
+.part{position:absolute;z-index:5;width:20px;height:20px;pointer-events:none;animation:partFly 1s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes partFly{0%{transform:translate(-50%,0) scale(.4);opacity:0}15%{opacity:1}100%{transform:translate(calc(-50% + var(--dx)),var(--dy)) scale(1) rotate(var(--r));opacity:0}}
+
+.endcard{position:absolute;z-index:7;left:50%;top:36%;transform:translate(-50%,-50%) rotate(-2deg);background:#fbf3df;color:var(--ink);
+  border:3px solid var(--ink);padding:6px 18px 8px;text-align:center;box-shadow:4px 4px 0 rgba(74,52,38,.35);animation:stamp .5s cubic-bezier(.3,1.6,.5,1) 1.6s both;max-width:80%}
+.endcard small{display:block;font-family:var(--display);font-size:15px;letter-spacing:.18em;color:var(--c-character)}
+.endcard b{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.05}
+@keyframes stamp{from{transform:translate(-50%,-50%) scale(1.8) rotate(-8deg);opacity:0}to{transform:translate(-50%,-50%) scale(1) rotate(-2deg);opacity:1}}
+
+.hint{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px 4px}
+.hint p{margin:0;font-size:13.5px;color:var(--muted);text-align:center;text-wrap:balance}
+.undo{border:1.5px solid #5a4636;background:var(--desk-2);color:var(--paper);border-radius:999px;padding:5px 12px;font-size:13px}
+
+/* the written story */
+.story{flex:1;min-height:0;overflow-y:auto;padding:6px 16px 10px;scroll-behavior:smooth}
+.story ol{list-style:none;margin:0 auto;padding:0;display:grid;gap:8px;max-width:62ch}
+.line{display:flex;gap:10px;align-items:flex-start;font-size:18px;line-height:1.45;animation:lineIn .5s ease both}
+.line .say{flex:none;width:32px;height:32px;border-radius:50%;border:1.5px solid #5a4636;background:var(--desk-2);font-size:14px;display:grid;place-items:center;margin-top:1px}
+.line.q .txt{font-family:var(--display);font-size:22px;line-height:1.2;color:var(--gold)}
+.line.end .txt{font-family:var(--display);font-size:24px;color:var(--gold)}
+.kw{border:0;background:none;padding:0 1px;font-weight:600;color:var(--paper);border-bottom:2.5px solid var(--cat,var(--gold));border-radius:1px}
+.kw:hover{background:rgba(255,255,255,.06)}
+@keyframes lineIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.btn{border:2px solid var(--ink);border-radius:999px;padding:8px 16px;font-family:var(--display);font-size:19px;line-height:1;background:var(--gold);color:var(--ink)}
+.btn.ghost{background:var(--paper);}
+
+/* the hand */
+.hand{flex:none;display:flex;gap:12px;overflow-x:auto;padding:12px 16px calc(14px + env(safe-area-inset-bottom));scroll-snap-type:x proximity}
+.card{flex:none;width:112px;height:156px;perspective:700px;touch-action:pan-x;scroll-snap-align:start;user-select:none;-webkit-user-select:none;outline:none}
+.card .in{position:relative;width:100%;height:100%;transition:transform .5s cubic-bezier(.3,1.3,.5,1);transform-style:preserve-3d}
+.card.flipped .in{transform:rotateY(180deg)}
+.card.lifted{opacity:.25}
+.face{position:absolute;inset:0;border-radius:8px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;
+  border:2.5px solid #1e1712;box-shadow:0 5px 0 #17110d,0 10px 18px rgba(0,0,0,.3)}
+.front{background:var(--paper);color:var(--ink);display:flex;flex-direction:column}
+.front .tag{background:var(--cat);color:#fbf3df;font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-bottom:2px solid #1e1712}
+.front .pic{flex:1;display:grid;place-items:center;padding:4px 6px 0;min-height:0}
+.front .pic svg{width:100%;height:100%;max-height:84px}
+.card:hover .front .pic svg,.card:focus-visible .front .pic svg{animation:hop2 .9s ease-in-out infinite}
+@keyframes hop2{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.front .word{font-family:var(--display);font-size:23px;text-align:center;padding:0 6px;line-height:1}
+.front .place-btn{border:0;background:none;font-size:10px;color:#8a7458;padding:2px 0 6px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.card .star{position:absolute;top:21px;right:6px;font-size:13px;color:var(--c-object)}
+.back{transform:rotateY(180deg);background:var(--paper-2);color:var(--ink);padding:6px 8px 7px;display:flex;flex-direction:column;gap:3px;border-top:8px solid var(--cat)}
+.back .w{font-family:var(--display);font-size:20px;line-height:1;flex:none}
+.card.phrase .back .w{font-size:15px;line-height:1.05}
+.back .bk{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:3px}
+.back .def{font-size:11.5px;line-height:1.25}
+.back .ex{font-size:10.5px;line-height:1.2;font-style:italic;color:#6b5440}
+.back .row{display:flex;gap:5px;flex:none}
+.back .row button{flex:1;border:1.5px solid var(--ink);border-radius:999px;background:#fbf3df;font-size:11px;padding:2px 4px;color:var(--ink)}
+.ghost-card{position:fixed;z-index:50;pointer-events:none;width:112px;height:156px;transform:translate(-50%,-60%) rotate(-6deg) scale(1.08)}
+
+.endpanel{flex:none;padding:12px 16px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px}
+.endpanel h2{margin:0;font-family:var(--display);font-weight:400;font-size:22px;color:var(--paper)}
+.endpanel h2 span{color:var(--gold);font-variant-numeric:tabular-nums}
+.endings{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0}
+.endings li{list-style:none;font-family:var(--display);font-size:16px;padding:2px 10px 3px;border-radius:999px;background:var(--paper);color:var(--ink);border:1.5px solid var(--ink)}
+.endings li.unk{background:transparent;color:var(--muted);border:1.5px dashed #6a5442}
+.endings li.now{background:var(--gold)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.pop{position:fixed;z-index:60;left:16px;right:16px;bottom:186px;margin:0 auto;max-width:360px;background:var(--paper);color:var(--ink);
+  border:3px solid #1e1712;border-radius:8px;padding:10px 14px 12px;box-shadow:0 6px 0 #17110d,0 14px 40px rgba(0,0,0,.45);border-top:9px solid var(--cat);animation:lineIn .25s ease both}
+.pop h3{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1;display:flex;align-items:center;gap:8px}
+.pop h3 svg{width:54px;height:60px}
+.pop .t{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#8a7458}
+.pop p{margin:6px 0 0;font-size:15px;line-height:1.4}
+.pop .ex{font-style:italic;color:#6b5440;font-size:14px}
+.pop .row{display:flex;gap:8px;margin-top:10px}
+.pop .row button{border:1.5px solid var(--ink);background:#fbf3df;border-radius:999px;padding:4px 11px;font-size:13px;color:var(--ink)}
+
+.thing.a-bake{animation:wiggle .35s ease-in-out 3}
+.thing.a-think{animation:nod 1.4s ease-in-out}
+.thing.a-hop{animation:hop .5s ease-out 2}
+.thing.a-laugh{animation:laughK .18s linear 7}
+.thing.a-point{animation:nod .8s ease-in-out}
+.thing.a-dance{animation:wiggle .5s ease-in-out 4}
+.thing.flip .em svg{transform:scaleX(-1)}
+@keyframes laughK{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px) rotate(2deg)}}
+svg .steam{animation:steam 2s ease-in-out infinite}
+@keyframes steam{0%,100%{transform:translateY(0);opacity:.35}50%{transform:translateY(-4px);opacity:.75}}
+.chalk{font-family:var(--display);font-size:13px;fill:#efe6d6}
+
+/* views */
+.view{flex:1;min-height:0;display:flex;flex-direction:column}
+.view[hidden],[hidden]{display:none!important}
+.menu{padding:4px 16px 16px;gap:12px;overflow-y:auto;justify-content:center}
+.menu-hero{background:var(--paper);border:3px solid #1e1712;border-radius:5px;box-shadow:0 5px 0 #17110d;color:var(--ink);display:flex;align-items:center;gap:8px;padding:10px 14px}
+.menu-hero p{margin:0;font-family:var(--display);font-size:22px;line-height:1.15}
+.hero-art{display:flex;flex:none}
+.hero-art svg{width:66px;height:80px}
+.tile{display:flex;align-items:center;gap:12px;text-align:left;background:var(--paper);color:var(--ink);border:3px solid #1e1712;border-radius:10px;padding:10px 12px;box-shadow:0 5px 0 #17110d;transition:transform .15s}
+.tile:active{transform:translateY(3px);box-shadow:0 2px 0 #17110d}
+.tile[aria-disabled="true"]{opacity:.6}
+.tile-art{flex:none;width:96px;height:72px;border:2px solid var(--ink);border-radius:6px;overflow:hidden;background:#fbf3df;display:grid;place-items:center}
+.tile-art svg{width:100%;height:100%}
+.tile-txt b{display:block;font-family:var(--display);font-weight:400;font-size:28px;line-height:1}
+.tile-txt small{display:block;font-size:13px;color:#6b5440;margin-top:4px;line-height:1.3}
+.menu-note{margin:0;text-align:center;font-size:13px;color:var(--muted)}
+
+/* quiz */
+.quiz{padding:0 16px calc(14px + env(safe-area-inset-bottom));gap:10px;overflow-y:auto}
+.qtop{display:flex;align-items:center;gap:10px}
+.qbar{flex:1;height:10px;border:2px solid #5a4636;border-radius:999px;overflow:hidden;background:var(--desk-2)}
+.qbar i{display:block;height:100%;background:var(--gold);transition:width .4s}
+.qtop b{font-family:var(--display);font-weight:400;font-size:20px;color:var(--paper);font-variant-numeric:tabular-nums}
+.qcard{position:relative;background:var(--paper);color:var(--ink);border:3px solid #1e1712;border-radius:5px;box-shadow:0 5px 0 #17110d;min-height:190px;padding:10px 14px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center}
+.qkick{position:absolute;top:0;left:0;background:#fbf3df;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);padding:2px 9px;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#8a7458}
+.qcard .qart svg{width:120px;height:140px}
+.qcard .qdef{font-family:var(--display);font-size:24px;line-height:1.15;max-width:30ch;margin-top:14px}
+.qcard .qscene{display:flex;align-items:flex-end;gap:6px;margin-top:16px}
+.qcard .qscene svg{width:74px;height:90px;flex:none}
+.qcard .qscene .balloon{position:relative;max-width:220px;animation:none}
+.qcard .qscene .balloon::after{left:-6px;bottom:12px;transform:rotate(135deg)}
+.qprev{margin:16px 0 0;font-size:14px;line-height:1.3;color:#6b5440;max-width:34ch;font-style:italic}
+.qprev b{font-style:normal;font-family:var(--display);font-weight:400;font-size:16px}
+.qprev + .qscene{margin-top:4px}
+.gap{display:inline-block;min-width:70px;border-bottom:2.5px dashed var(--c-phrase);color:var(--c-phrase)}
+.qlisten{width:96px;height:96px;border-radius:50%;border:3px solid var(--ink);background:var(--gold);font-size:40px;margin-top:12px;box-shadow:0 4px 0 #17110d}
+.qopts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qopt{min-height:62px;background:#fffaf0;color:var(--ink);border:2.5px solid #1e1712;border-radius:14px;padding:6px 8px;font-family:var(--display);font-size:19px;line-height:1.1;box-shadow:0 4px 0 #17110d}
+.qopt:active{transform:translateY(2px)}
+.qopt.ok{background:#cfe3b0;border-color:#3f6b2a}
+.qopt.bad{background:#f1c2b5;border-color:#8a2f22;animation:shake .35s}
+.qopt.dim{opacity:.5}
+.qfb{background:var(--desk-2);border:2px solid #5a4636;border-radius:12px;padding:10px 12px;display:grid;gap:6px;animation:lineIn .3s ease both}
+.qfb .v{font-family:var(--display);font-size:22px}
+.qfb .v.good{color:#a9d18e}.qfb .v.bad{color:#f0a18c}
+.qfb p{margin:0;font-size:14px;line-height:1.35;color:var(--paper)}
+.qfb .row{display:flex;gap:8px;justify-content:flex-end}
+.qend{background:var(--paper);color:var(--ink);border:3px solid #1e1712;border-radius:5px;box-shadow:0 5px 0 #17110d;padding:14px;text-align:center;display:grid;gap:8px}
+.qend .big{font-family:var(--display);font-size:56px;line-height:1}
+.qend .stars{font-size:30px;letter-spacing:4px;color:var(--c-object)}
+.qend h2{margin:0;font-family:var(--display);font-weight:400;font-size:28px}
+.qend ul{list-style:none;margin:0;padding:0;text-align:left;display:grid;gap:6px}
+.qend li{font-size:14px;line-height:1.3;border-top:1.5px dashed #c9b89b;padding-top:6px}
+.qend li b{font-family:var(--display);font-weight:400;font-size:18px}
+.qend .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+
+/* grammar */
+.menu-hero{padding:8px 14px}
+.hero-art svg{width:54px;height:66px}
+.tile{padding:8px 12px}
+.tile-art{width:84px;height:62px}
+.gram{padding:0 16px calc(16px + env(safe-area-inset-bottom));overflow-y:auto;gap:10px}
+.ghead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.ghead h2{margin:0;font-family:var(--display);font-weight:400;font-size:30px;color:var(--paper)}
+.ghead span{font-size:13px;color:var(--muted)}
+.gintro{margin:0;font-size:13.5px;line-height:1.4;color:var(--muted)}
+.glist{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.gitem{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:var(--paper);color:var(--ink);border:2.5px solid #1e1712;border-radius:10px;padding:8px 10px;box-shadow:0 4px 0 #17110d}
+.gitem .n{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-family:var(--display);font-size:18px;background:#fbf3df}
+.gitem .t{flex:1;min-width:0}
+.gitem b{display:block;font-family:var(--display);font-weight:400;font-size:20px;line-height:1.05}
+.gitem small{display:block;font-size:12px;color:#6b5440;margin-top:2px}
+.gitem .st{flex:none;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 8px;border:1.5px solid var(--ink)}
+.gitem .st.new{background:var(--gold)}
+.gitem .st.done{background:#cfe3b0}
+.gitem.locked{background:#d9ccb2;opacity:.75;box-shadow:0 4px 0 #17110d}
+.gitem.locked .n{background:transparent}
+.gpage{display:grid;gap:10px}
+.gback{justify-self:start;border:1.5px solid #5a4636;background:var(--desk-2);color:var(--paper);border-radius:999px;padding:5px 12px;font-size:13px}
+.gtitle{background:var(--paper);color:var(--ink);border:3px solid #1e1712;border-radius:5px;box-shadow:0 5px 0 #17110d;padding:10px 14px}
+.gtitle h2{margin:0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1.05;text-wrap:balance}
+.gtitle p{margin:4px 0 0;font-size:14px;color:#6b5440}
+.gbox{background:var(--paper);color:var(--ink);border:2.5px solid #1e1712;border-radius:8px;padding:10px 12px;display:grid;gap:7px}
+.gbox h3{margin:0;font-family:var(--display);font-weight:400;font-size:22px;display:flex;align-items:center;gap:8px}
+.gbox h3::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--k,var(--gold));border:2px solid var(--ink)}
+.grow{display:grid;gap:2px;border-top:1.5px dashed #c9b89b;padding-top:7px}
+.grow:first-of-type{border-top:0;padding-top:0}
+.grow .l{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8a7458}
+.grow .f{font-family:var(--display);font-size:19px;line-height:1.15;color:var(--c-phrase)}
+.grow .e{font-size:15px;line-height:1.35}
+.gbox ul{margin:0;padding-left:18px;display:grid;gap:5px;font-size:15px;line-height:1.4}
+.gex{display:flex;gap:8px;align-items:flex-start;font-size:15.5px;line-height:1.4}
+.gex .say{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--ink);background:#fbf3df;font-size:13px}
+.gex small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a7458}
+.gbox mark{background:#f5e27a;color:inherit;padding:0 2px;border-radius:3px}
+.ok-t{color:#3f6b2a;font-weight:700}.bad-t{color:#a5492b;font-weight:700}
+.gq{display:grid;gap:6px;border-top:1.5px dashed #c9b89b;padding-top:8px}
+.gq:first-of-type{border-top:0;padding-top:0}
+.gq p{margin:0;font-family:var(--display);font-size:21px;line-height:1.15}
+.gq .opts{display:flex;flex-wrap:wrap;gap:6px}
+.gq .opts button{border:2px solid var(--ink);background:#fffaf0;color:var(--ink);border-radius:999px;padding:5px 12px;font-family:var(--display);font-size:18px}
+.gq .opts button.ok{background:#cfe3b0;border-color:#3f6b2a}
+.gq .opts button.bad{background:#f1c2b5;border-color:#8a2f22}
+.gq .opts button:disabled{cursor:default}
+.gscore{font-family:var(--display);font-size:22px;text-align:center}
+
+/* tabs, today, phrasebook, settings */
+.tabs{flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:5px 10px calc(5px + env(safe-area-inset-bottom));border-top:1.5px solid #4a3a2e;background:#241c17}
+.tabs button{border:0;background:none;color:var(--muted);display:grid;justify-items:center;gap:2px;font-size:11.5px;padding:5px 0 4px;border-radius:10px}
+.tabs button span{font-size:20px;line-height:1;filter:grayscale(.7);opacity:.75}
+.tabs button[aria-current="page"]{color:var(--paper);background:var(--desk-2)}
+.tabs button[aria-current="page"] span{filter:none;opacity:1}
+.hand,.endpanel{padding-bottom:12px!important}
+.thead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:4px}
+.thead h2{margin:0;font-family:var(--display);font-weight:400;font-size:34px;color:var(--paper);line-height:1}
+.thead p{margin:5px 0 0;font-size:13.5px;color:var(--muted)}
+.ring{flex:none;width:70px;height:70px;border-radius:50%;background:conic-gradient(var(--gold) calc(var(--p)*360deg),#4a3a2e 0);display:grid;place-items:center;position:relative}
+.ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--desk)}
+.ring div{position:relative;display:grid;justify-items:center;line-height:1}
+.ring b{font-family:var(--display);font-weight:400;font-size:26px;color:var(--paper)}
+.ring small{font-size:10px;color:var(--muted)}
+.k{display:block;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#8a7458}
+.tile .tile-txt .k{margin:0 0 4px;font-size:10px}
+.tile .tile-txt b{font-size:24px}
+.tile.slim{padding:10px 14px}
+.tile .go{margin-left:auto;font-family:var(--display);font-size:28px}
+.pod{background:#fbf3df;color:var(--ink);border:2.5px dashed #8a7458;border-radius:10px;padding:10px 12px;display:grid;gap:3px}
+.pod .top{display:flex;align-items:center;gap:8px}
+.pod b{flex:1;font-family:var(--display);font-weight:400;font-size:25px;line-height:1.05}
+.pod .m{font-size:14.5px}.pod .s{font-size:13px;color:#6b5440;font-style:italic}
+.tstats{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.tstats span{background:var(--desk-2);border:1.5px solid #5a4636;border-radius:10px;padding:6px 3px;text-align:center;font-size:10.5px;color:var(--muted);line-height:1.2}
+.tstats b{display:block;font-family:var(--display);font-weight:400;font-size:21px;color:var(--paper)}
+.search{width:100%;flex:none;border:2.5px solid #1e1712;border-radius:999px;padding:10px 16px;font:inherit;font-size:16px;background:var(--paper);color:var(--ink)}
+.search::placeholder{color:#9a8468}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ptile{display:grid;gap:2px;text-align:left;background:var(--paper);color:var(--ink);border:2.5px solid #1e1712;border-radius:12px;padding:8px 10px 9px;box-shadow:0 4px 0 #17110d;align-content:start}
+.ptile:active{transform:translateY(2px);box-shadow:0 2px 0 #17110d}
+.ptile .e{font-size:24px;line-height:1.1}
+.ptile b{font-family:var(--display);font-weight:400;font-size:21px;line-height:1}
+.ptile small{font-size:11.5px;color:#6b5440;line-height:1.25}
+.ptile .bar{display:block;height:7px;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;background:#fbf3df;margin-top:5px}
+.ptile .bar i{display:block;height:100%;background:var(--c-place)}
+.ptile .c{font-size:10.5px}
+.typebox{display:grid;gap:8px}
+.typebox input{width:100%;border:2.5px solid #1e1712;border-radius:12px;padding:11px 14px;font-family:var(--display);font-size:22px;background:#fffaf0;color:var(--ink)}
+.typebox input.ok{background:#cfe3b0}.typebox input.bad{background:#f1c2b5}
+.thint{margin:0;text-align:center;font-family:var(--display);font-size:21px;letter-spacing:.08em;color:var(--gold)}
+.tmean{font-size:13px;color:#6b5440;max-width:34ch}
+.fixed{margin:8px 0 0;font-family:var(--display);font-size:20px;color:#3f6b2a}
+.qtop #rxQuit{flex:none;padding:2px 10px}
+.sheet-bg{position:fixed;inset:0;z-index:50;background:rgba(20,14,10,.62);display:grid;place-items:end center;animation:fadeIn .2s}
+.sheet{width:min(720px,100%);max-height:88vh;overflow-y:auto;background:var(--paper);color:var(--ink);border:3px solid #1e1712;border-bottom:0;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));display:grid;gap:12px;animation:sheetUp .25s ease}
+.sheet h2{margin:0;font-family:var(--display);font-weight:400;font-size:30px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1.5px dashed #c9b89b;padding-top:10px}
+.srow.col{flex-direction:column;align-items:stretch}
+.srow > span{font-size:15px;font-weight:500}
+.srow small{font-size:12px;color:#6b5440}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;border:1.5px solid var(--ink);border-radius:999px;padding:7px 4px;background:#fbf3df;font-size:14px;color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--gold);font-weight:600}
+.credit{margin:0;font-size:11px;color:#8a7458}
+.intro{display:grid;gap:12px;justify-items:center;text-align:center;padding:12px 4px 4px}
+.intro .ie{font-size:58px;line-height:1}
+.intro p{margin:0;font-size:16px;line-height:1.45;max-width:34ch}
+.dots{display:flex;gap:6px}.dots i{width:8px;height:8px;border-radius:50%;background:#c9b89b}.dots i.on{background:var(--ink)}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:0}}
+@keyframes fadeIn{from{opacity:0}}
+
+.sech{margin:6px 0 0;font-family:var(--display);font-weight:400;font-size:24px;color:var(--paper)}
+.bgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.btile{display:grid;gap:3px;justify-items:start;background:var(--paper);color:var(--ink);border:2.5px solid #1e1712;border-radius:12px;padding:7px 9px;box-shadow:0 4px 0 #17110d;text-align:left}
+.btile b{font-family:var(--display);font-weight:400;font-size:19px;line-height:1}
+.btile span{font-size:15px;letter-spacing:1px}
+.btile .bar{display:block;width:100%;height:6px;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;background:#fbf3df}
+.btile .bar i{display:block;height:100%;background:var(--c-phrase)}
+.btile small{font-size:10.5px;color:#6b5440}
+.vbig{font-size:64px;line-height:1.05;margin-top:12px}
+.vemo{font-size:24px;line-height:1}
+.rxcard mark,.qcard mark,.qfb mark{background:#f5e27a;color:inherit;border-radius:3px;padding:0 2px}
+.qfb mark{color:var(--ink)}
+.qopts.long{grid-template-columns:1fr}
+.qopts.long .qopt{min-height:48px;font-family:var(--body);font-size:15px;text-align:left;padding:8px 12px}
+
+.line.brief .txt{font-style:italic;color:#6b5440}
+.insc{display:grid;gap:4px;margin:4px 0 8px}
+.insc .chips{display:flex;flex-wrap:wrap;gap:6px}
+.insc .chips span,.gchip{border:1.5px solid var(--ink);border-radius:999px;padding:3px 10px;font-size:12.5px;background:#fbf3df;color:var(--ink)}
+.gchip{background:#f5e27a;font-weight:600}
+.playsc{border:0;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}
+.exwho{font-weight:600;color:#6b5440}
+.emo-art{width:100%;height:100%}
+
+.pchip{border:1.5px solid var(--ink);border-radius:999px;padding:3px 10px;font-size:12.5px;background:#cfe3b0;color:var(--ink);font-weight:600}
+.rxcard.flash{animation:flash 1.6s ease}
+@keyframes flash{0%,60%{background:#f5e27a}100%{background:transparent}}
+
+.insc-l{font-size:12px;color:#6b5440}
+.insc-l .playsc{color:#3f6b8a}
+
+.nwho{font-family:var(--body);font-size:12px;font-weight:600;color:#8a5a3a;text-transform:none}
+.balloon.phone{border-style:dashed;background:#eef4fb}
+.balloon.phone b{font-family:var(--body);font-size:11px;font-weight:600;color:#3f6b8a}
+
+/* story controls */
+.ctrl{flex:none;display:flex;align-items:center;gap:6px;padding:8px 12px 0}
+.cb{flex:none;width:34px;height:34px;border-radius:50%;border:1.5px solid #5a4636;background:var(--desk-2);color:var(--paper);font-size:15px;line-height:1;display:grid;place-items:center;padding:0}
+.cb.big{width:40px;height:40px;font-size:17px;border-color:var(--gold);color:var(--gold)}
+.cb:disabled{opacity:.3}
+.cb[hidden]{display:none}
+.tl{flex:1;min-width:0;display:flex;gap:3px;align-items:center;height:34px}
+.tl button,.tl .cur{flex:1;min-width:6px;height:10px;border-radius:999px;border:0;padding:0;background:#6b5440;position:relative;overflow:hidden}
+.tl button{cursor:pointer}
+.tl button:hover,.tl button:focus-visible{background:#a58a68}
+.tl .cur{flex:2;background:#4a3a2e;height:12px;outline:1.5px solid var(--gold)}
+.tl .cur i{position:absolute;inset:0 auto 0 0;background:var(--gold);transition:width .4s ease}
+.tl .end{background:var(--gold)}
+.hint{padding:4px 16px 2px}
+.hint p{font-size:12.5px}
+.story{position:relative}
+.story .endpanel{padding:14px 0 18px;border-top:1.5px dashed #5a4636;margin-top:10px}
+.stage.mini{height:66px!important;min-height:0!important}
+.stage.mini .scene,.stage.mini #things,.stage.mini #balloons,.stage.mini #endcard,.stage.mini .marquee,.stage.mini .sky{display:none}
+.stage.mini .narr{min-height:66px;border-bottom:0}
+.stage.mini .narr p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.paused-note{flex:1;display:grid;place-items:center;height:156px;color:var(--gold);font-family:var(--display);font-size:22px}
+
+/* reflexes */
+.menu{justify-content:flex-start}
+.rxtoday{background:var(--paper);color:var(--ink);border:3px solid #1e1712;border-radius:8px;box-shadow:0 5px 0 #17110d;padding:12px 14px;display:grid;gap:8px}
+.rxtoday h3{margin:0;font-family:var(--display);font-weight:400;font-size:26px;line-height:1}
+.rxtoday p{margin:0;font-size:14px;color:#6b5440}
+.rxstats{display:flex;gap:8px;flex-wrap:wrap}
+.rxstats span{border:1.5px solid var(--ink);border-radius:999px;padding:3px 10px;font-size:13px;background:#fbf3df}
+.rxpack .bar{flex:none;width:64px;height:8px;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;background:#fbf3df}
+.rxpack .bar i{display:block;height:100%;background:var(--c-place)}
+.rxcard{display:grid;gap:3px;border-top:1.5px dashed #c9b89b;padding-top:8px}
+.rxcard:first-of-type{border-top:0;padding-top:0}
+.rxcard .top{display:flex;align-items:center;gap:8px}
+.rxcard b{flex:1;font-family:var(--display);font-weight:400;font-size:21px;line-height:1.1}
+.rxcard .m{font-size:14.5px}
+.rxcard .s{font-size:13px;color:#6b5440;font-style:italic}
+.rxcard .lv{font-size:11px;color:#8a7458}
+.say-s{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--ink);background:#fbf3df;font-size:13px}
+.timer{position:absolute;left:0;right:0;bottom:0;height:6px;background:rgba(74,52,38,.12)}
+.timer i{display:block;height:100%;background:var(--c-character);transform-origin:left;animation:tick linear forwards}
+@keyframes tick{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.qsit{font-family:var(--display);font-size:23px;line-height:1.15;max-width:30ch;margin-top:14px}
+.qsit small{display:block;font-family:var(--body);font-size:12px;color:#8a7458;margin-bottom:4px;letter-spacing:.08em;text-transform:uppercase}
+.intro-chunk{font-family:var(--display);font-size:34px;line-height:1.05;margin-top:14px}
+.intro-m{font-size:16px;line-height:1.35;max-width:32ch}
+.intro-s{font-size:14px;color:#6b5440;font-style:italic;max-width:34ch}
+.build-ans{min-height:52px;width:100%;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-content:flex-start;border-bottom:2.5px dashed #c9b89b;padding:6px 0 10px;margin-top:12px}
+.tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.tile-w{border:2px solid #1e1712;background:#fffaf0;color:var(--ink);border-radius:10px;padding:6px 11px;font-family:var(--display);font-size:20px;box-shadow:0 3px 0 #17110d}
+.tile-w.used{visibility:hidden}
+.build-ans .tile-w{background:#f5e27a}
+.build-ans.ok .tile-w{background:#cfe3b0}.build-ans.bad .tile-w{background:#f1c2b5}
+
+/* narrator strip at the top of the panel */
+.narr{position:absolute;z-index:7;top:0;left:0;right:0;background:#fbf3df;border-bottom:2.5px solid #1e1712;padding:3px 10px 6px;min-height:56px;cursor:pointer}
+.narr small{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#8a7458}
+.narr p{margin:1px 0 0;font-family:var(--display);font-size:19px;line-height:1.12;color:var(--ink);text-wrap:balance}
+.narr p.q{color:#a5492b}
+.narr p.q::before{content:"? ";font-weight:700}
+.narr p.in{animation:narrIn .45s ease both}
+.narr p .kw{color:inherit;font-weight:400;border-bottom-width:2.5px}
+@keyframes narrIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.waiting{flex:1;display:grid;place-items:center;height:156px;color:var(--muted);font-family:var(--display);font-size:20px}
+.waiting span{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+.skip{border:1.5px solid var(--gold);background:var(--desk-2);color:var(--gold);border-radius:999px;padding:5px 12px;font-size:13px}
+.card.deal{animation:deal .45s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes deal{from{transform:translateY(60px) rotate(8deg);opacity:0}to{transform:none;opacity:1}}
+
+/* speech balloons */
+#balloons{position:absolute;inset:0;z-index:6;pointer-events:none}
+.balloon{position:absolute;max-width:min(58%,230px);background:#fffaf0;color:var(--ink);border:2.5px solid var(--ink);border-radius:16px;
+  padding:4px 10px 5px;font-family:var(--display);font-size:17px;line-height:1.12;box-shadow:2px 3px 0 rgba(74,52,38,.25);pointer-events:auto;
+  animation:balloonIn .35s cubic-bezier(.3,1.6,.5,1) both;transform-origin:20px 100%}
+.balloon.tr{transform-origin:calc(100% - 20px) 100%}
+.balloon::after{content:"";position:absolute;bottom:-11px;left:18px;width:14px;height:14px;background:#fffaf0;border-right:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);transform:skewX(30deg) rotate(45deg) scale(.8,1.2);border-radius:0 0 3px 0}
+.balloon.tr::after{left:auto;right:18px;transform:skewX(-30deg) rotate(45deg) scale(1.2,.8)}
+.balloon .kw{color:var(--ink);font-weight:400;border-bottom-width:2.5px}
+.balloon.late{animation-delay:.8s}
+.balloon.fade{animation:balloonIn .35s cubic-bezier(.3,1.6,.5,1) both,balloonOut .4s ease 3.4s both}
+@keyframes balloonIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes balloonOut{to{opacity:0;visibility:hidden}}
+
+.line.speech .who{font-family:var(--display);font-size:19px;color:var(--who,var(--gold));margin-right:6px}
+.line.speech .quote{font-style:normal}
+.line.intro .txt{color:var(--muted);font-size:15px}
+
+/* levels */
+.levels{flex:none;display:flex;gap:8px;padding:6px 16px 0;overflow-x:auto}
+.levels[hidden]{display:none}
+.lvl{flex:1 0 auto;border:2px solid #5a4636;background:var(--desk-2);color:var(--paper);border-radius:10px;padding:5px 10px 6px;text-align:left;line-height:1.1}
+.lvl b{display:block;font-family:var(--display);font-weight:400;font-size:19px}
+.lvl small{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lvl[aria-pressed="true"]{background:var(--paper);color:var(--ink);border-color:#1e1712}
+.lvl[aria-pressed="true"] small{color:#7a6650}
+
+/* phrase cards */
+.front .phr{flex:1;display:grid;place-items:center;padding:6px 8px 0;text-align:center}
+.front .phr span{display:block;background:#fffaf0;border:2px solid var(--ink);border-radius:14px;padding:6px 7px;font-family:var(--display);font-size:17px;line-height:1.08;position:relative}
+.front .phr span::after{content:"";position:absolute;bottom:-8px;left:16px;width:10px;height:10px;background:#fffaf0;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(45deg)}
+.card.phrase .front .word{display:none}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <h1 class="brand">Story Cards</h1>
+    <span class="chip" title="Days in a row">🔥 <b id="streak">0</b></span>
+    <span class="chip" title="Endings found">★ <b id="endcount">0</b></span>
+    <button class="iconbtn" id="voice" aria-pressed="true" aria-label="Voice on or off">🔊</button>
+    <button class="iconbtn" id="gear" type="button" aria-label="Settings">⚙</button>
+  </header>
+
+  <section class="view menu" id="menuView"></section>
+
+  <section class="view" id="quizView" hidden></section>
+  <section class="view gram" id="grammarView" hidden></section>
+  <section class="view gram" id="rxView" hidden></section>
+
+  <section class="view" id="storyView" hidden>
+  <div class="stage-wrap">
+    <div class="stage" id="stage" aria-label="Stage">
+      <div class="scene" id="scene"></div>
+      <div class="sky" id="sky"></div>
+      <div id="things"></div>
+      <div id="balloons"></div>
+      <div class="narr" id="narr" hidden><small id="caption"></small><p id="narrText"></p></div>
+      <div class="marquee"><p>Real life, real English.<span>Pick a chapter, then drag a scene onto this page.</span></p></div>
+      <div id="endcard"></div>
+    </div>
+  </div>
+
+  <div class="ctrl" id="ctrl" hidden>
+    <button class="cb" id="cbMenu" type="button" aria-label="All scenes" title="All scenes">☰</button>
+    <button class="cb" id="cbBack" type="button" aria-label="Back one step" title="Back one step">⏮</button>
+    <button class="cb big" id="cbPlay" type="button" aria-label="Pause">⏸</button>
+    <div class="tl" id="tl" role="group" aria-label="Story timeline: tap a step to go back to it"></div>
+    <button class="cb" id="cbSkip" type="button" aria-label="Skip to the end of this part" title="Skip">⏭</button>
+    <button class="cb" id="cbMini" type="button" aria-label="Hide or show the stage" title="Hide / show the stage">▴</button>
+  </div>
+  <div class="hint"><p id="hint"></p><span id="undoHost"></span></div>
+
+  <div class="story" id="storyBox"><ol id="story" aria-live="polite"></ol><div class="endpanel" id="endpanel" hidden></div></div>
+
+  <nav class="levels" id="levels" aria-label="Levels"></nav>
+  <div class="hand" id="hand" aria-label="Your cards"></div>
+  </section>
+  <nav class="tabs" aria-label="Sections">
+    <button type="button" data-v="menu"><span>🏠</span>Today</button>
+    <button type="button" data-v="story"><span>🎬</span>Stories</button>
+    <button type="button" data-v="rx"><span>💬</span>Phrases</button>
+    <button type="button" data-v="grammar"><span>✏️</span>Grammar</button>
+  </nav>
+</div>
+<div id="popHost"></div>
+<div id="sheetHost"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="wob" x="-15%" y="-15%" width="130%" height="130%"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="3"><animate attributeName="seed" values="3;7;11" dur=".42s" calcMode="discrete" repeatCount="indefinite"/></feTurbulence><feDisplacementMap in="SourceGraphic" scale="2.2" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="wobS" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="2.5" xChannelSelector="R" yChannelSelector="G"/></filter>
+</defs></svg>
+
+<script src="story-data.js"></script>
+<script src="art.js"></script>
+<script src="grammar.js"></script>
+<script src="kit.js"></script>
+<script src="words.js"></script>
+<script src="life.js"></script>
+<script src="audio/index.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const label=w=>W[w].word||W[w].text||w;
+const catColor=w=>`var(--c-${W[w].cat})`;
+const placeOf=sc=>(SC[sc]&&SC[sc].place)||sc;
+const baseArt=art;
+art=function(w,o){ const d=W[w];
+  if(d&&d.place&&SC[w]) return placeIcon(d.place);
+  if(d&&d.cat==="vocab"&&d.emo) return `<svg viewBox="0 0 100 100" class="emo-art" aria-hidden="true"><text x="50" y="74" font-size="68" text-anchor="middle">${d.emo}</text></svg>`;
+  return baseArt(w,o); };
+let booting=true;
+const TAG=/\[([^\]|]+)(?:\|([^\]]+))?\]/g;
+/* a phrase after a comma starts with a small letter: "Oh wait, can I pay by card?" */
+function tagText(str,idx,w,t){ let x=t||label(w); if(str.slice(0,idx).trimEnd().endsWith(",") && /^[A-Z][a-z]/.test(x) && !/^I[ ']/.test(x)) x=x[0].toLowerCase()+x.slice(1); return x; }
+const plain=l=>l.replace(TAG,(m,w,t,off,str)=>tagText(str,off,w,t));
+const PLACES=Object.keys(SC);
+const PITCH={you:1.05,friend:.85,barista:1.2,stranger:.7,guest:1.25,boss:.8,grandma:1.15,mom:1.2,girl:1.45,boy:1.35,monster:1.7};
+let level=1; try{ level=+localStorage.getItem("sc-level")||1; }catch(e){}
+
+let S, uid=0, voiceOn=true, found={};
+try{ if(matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('#wob animate').forEach(n=>n.remove()); }catch(e){}
+try{ voiceOn=localStorage.getItem("sc-voice")!=="off"; found=JSON.parse(localStorage.getItem("sc-found")||"{}")||{}; }catch(e){}
+function saveFound(){ try{localStorage.setItem("sc-found",JSON.stringify(found));}catch(e){} }
+function fresh(){ return {sc:null,node:null,things:[],sky:"clear",story:[],learned:[],hist:[],ended:null,playing:false,narr:null,says:[]}; }
+
+/* ---------- voice ---------- */
+let enVoice=null;
+function pickVoice(){ try{ const v=speechSynthesis.getVoices(); enVoice=v.find(x=>/^en/i.test(x.lang)&&/(enhanced|premium|natural|neural)/i.test(x.name))||v.find(x=>/en[-_]US/i.test(x.lang)&&/natural|samantha|google/i.test(x.name))||v.find(x=>/^en/i.test(x.lang))||null; }catch(e){} }
+try{ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }catch(e){}
+function sayQueue(items){
+  if(!voiceOn) return;
+  try{ speechSynthesis.cancel();
+    items.filter(it=>it.text).forEach(it=>{ const u=new SpeechSynthesisUtterance(it.text); u.lang="en-US"; if(enVoice)u.voice=enVoice; u.rate=.92; u.pitch=it.who?(PITCH[it.who]||1):1; speechSynthesis.speak(u); });
+  }catch(e){}
+}
+/* ---------- natural voices: pre-recorded neural voices, packed per story ---------- */
+const VOICES={"narrator": "af_heart", "wordUS": "af_heart", "wordUK": "bf_emma", "cast": {"you": "am_michael", "friend": "am_puck", "grandma": "bf_alice", "mom": "af_sarah", "dad": "bm_george", "boy": "am_echo@1.22", "girl": "af_nova@1.18", "monster": "am_fenrir@1.35", "barista": "af_nicole", "waiter": "bm_lewis", "cashier": "af_kore", "doctor": "bf_emma", "receptionist": "bf_lily", "manager": "af_jessica", "bartender": "bm_daniel", "stranger": "bm_fable", "guest": "af_river", "boss": "am_onyx", "roommate": "am_liam", "neighbor": "bf_isabella", "partner": "af_aoede", "coworker": "af_alloy", "date": "am_eric"}};
+const ACCENT=v=>v&&v[0]==="b"?"UK":"US";
+const FLAG={US:"🇺🇸",UK:"🇬🇧"};
+const voiceOf=who=>who?VOICES.cast[who]:VOICES.narrator;
+const accentOf=who=>{ const v=voiceOf(who); return v?ACCENT(v):""; };
+function fnv(s){ let h=0x811c9dc5; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } return ("0000000"+h.toString(16)).slice(-8); }
+const AIDX=(typeof AUDIO_INDEX!=="undefined")?AUDIO_INDEX:{};
+const clipId=(voice,text)=>{ if(!voice) return null; const id=fnv(voice+"|"+String(text).trim()); return AIDX[id]?id:null; };
+let actx=null; const packs=new Map(), bufs=new Map(); let curSrc=null;
+function audioCtx(){ try{ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} return actx; }
+function unlockAudio(){ const c=audioCtx(); try{ if(c&&c.state==="suspended") c.resume(); }catch(e){} }
+document.addEventListener("pointerdown",unlockAudio,true);
+document.addEventListener("keydown",unlockAudio,true);
+function loadPack(name){
+  if(!packs.has(name)) packs.set(name, fetch("audio/"+name+".mp3").then(r=>{ if(!r.ok) throw new Error("pack"); return r.arrayBuffer(); }).catch(e=>{ packs.delete(name); throw e; }));
+  return packs.get(name);
+}
+function loadClip(id){
+  if(bufs.has(id)) return bufs.get(id);
+  const [pack,off,len]=AIDX[id]; const c=audioCtx();
+  const p=loadPack(pack).then(ab=>new Promise((res,rej)=>{ try{ const r=c.decodeAudioData(ab.slice(off,off+len),res,rej); if(r&&r.then) r.then(res,rej); }catch(e){ rej(e); } }));
+  p.catch(()=>bufs.delete(id)); bufs.set(id,p); return p;
+}
+function stopClip(){ const s=curSrc; curSrc=null; try{ s&&s.stop(); }catch(e){} }
+function playClip(id,onstart,onend){
+  const c=audioCtx(); if(!c){ onend&&onend(true); return; }
+  unlockAudio(); stopClip(); try{ speechSynthesis.cancel(); }catch(e){}
+  const mine={}; curSrc=mine;
+  loadClip(id).then(buf=>{
+    if(curSrc!==mine) return;
+    const s=c.createBufferSource(); s.buffer=buf; s.connect(c.destination);
+    s.onended=()=>{ if(curSrc===s){ curSrc=null; onend&&onend(false); } };
+    curSrc=s; s.start(); onstart&&onstart();
+  }).catch(()=>{ if(curSrc===mine){ curSrc=null; onend&&onend(true); } });
+}
+function preloadScene(sc){ try{ if(Object.values(AIDX).some(x=>x[0]===sc)) loadPack(sc).catch(()=>{}); }catch(e){} }
+let lastAccent="";
+function say(text,who,opts){
+  if(!voiceOn||!text) return;
+  const t=String(text).trim(); let id=null;
+  if(who) id=clipId(voiceOf(who),t);
+  else {
+    const uk=clipId(VOICES.wordUK,t), us=clipId(VOICES.wordUS,t)||clipId(VOICES.narrator,t);
+    id = (opts&&opts.uk&&uk) ? uk : (us||uk);
+  }
+  lastAccent = id ? (id===clipId(VOICES.wordUK,t)?"UK":(who?accentOf(who):"US")) : "";
+  if(id){ playClip(id,null,(failed)=>{ if(failed) sayQueue([{text,who}]); }); return; }
+  sayQueue([{text,who}]);
+}
+
+/* ---------- scenario engine ---------- */
+const nodeOf=()=>S.sc&&S.node?SC[S.sc].nodes[S.node]:null;
+const thing=w=>S.things.find(t=>t.w===w&&!t.gone);
+function learn(w){ if(W[w]&&!S.learned.includes(w)) S.learned.push(w); }
+function endingsOf(sc){ return Object.entries(SC[sc].nodes).filter(([,n])=>n.end).map(([id,n])=>({id,title:n.end})); }
+function isFound(sc,id){ return !!(found[sc]&&found[sc].includes(id)); }
+function explored(sc,id){ const n=SC[sc].nodes[id]; return n.end?isFound(sc,id):Object.values(n.cards).every(x=>explored(sc,x)); }
+function snapshot(){ const {hist,...rest}=S; const c=JSON.parse(JSON.stringify(rest)); c.things=c.things.filter(t=>!t.gone); return c; }
+
+function playCard(w){
+  if(S.ended||S.playing) return false;
+  unlockTTS();
+  if(!S.sc){
+    if(!SC[w]) return false;
+    S.sc=w; learn(w); preloadScene(w);
+    if(SC[w].brief) S.story.push({s:"🎬 "+SC[w].brief,who:null,kind:"brief"});
+    go(SC[w].start); return true;
+  }
+  const n=nodeOf(); const next=n&&n.cards&&n.cards[w];
+  if(!next) return false;
+  S.hist.push(snapshot()); learn(w);
+  go(next,w); return true;
+}
+
+let play=null, ttsWorks=null;
+function go(id,via){
+  const n=SC[S.sc].nodes[id]; S.node=id;
+  const anims=[]; S.says=[]; S.narr=null;
+  n.do.forEach(op=>applyOp(op,anims));
+  const beats=n.lines.map(l=>Array.isArray(l)?{who:l[0],s:l[1]}:{s:l});
+  if(via && W[via] && !(Array.isArray(n.lines[0]) && n.lines[0][0]==="you")) beats.unshift({who:"you",s:"["+via+"]"});
+  if(n.end){
+    beats.push({kind:"end",s:"The end: "+n.end,end:n.end});
+    found[S.sc]=found[S.sc]||[]; if(!found[S.sc].includes(id)){ found[S.sc].push(id); saveFound(); rxAddStory(); }
+  } else beats.push({kind:"q",s:n.ask});
+  S.playing=true;
+  render(anims);
+  stopBeats(); play={beats,i:0,token:0}; play.timer=setTimeout(nextBeat,650);
+}
+function stopBeats(){ if(play){ clearTimeout(play.timer); clearTimeout(play.safety); } play=null; }
+function showBeat(b){
+  S.story.push({s:b.s,who:b.who||null,kind:b.kind});
+  for(const m of b.s.matchAll(TAG)) learn(m[1]);
+  if(b.who) S.says=[{who:b.who,s:b.s}];
+  else if(b.kind==="q") S.narr={s:b.s,kind:"q"};
+  else if(b.kind==="end") S.ended=b.end;
+  else { S.narr={s:b.s}; S.says=[]; }
+  renderStory(); renderNarr(); renderBalloons(); renderHint();
+  updateChips();
+}
+function nextBeat(){
+  const p=play; if(!p) return;
+  clearTimeout(p.timer); clearTimeout(p.safety);
+  if(p.i>=p.beats.length){ finishBeats(); return; }
+  const b=p.beats[p.i++]; const tok=++p.token; showBeat(b);
+  speakBeat(p,b,tok);
+}
+function speakBeat(p,b,tok){
+  const text=b.kind==="end"?"The end.":plain(b.s);
+  const readMs=900+text.length*48;
+  const go=(ms)=>{ if(play!==p||p.token!==tok) return; p.token++; clearTimeout(p.timer); clearTimeout(p.safety); p.timer=setTimeout(nextBeat,ms); };
+  const cid=voiceOn?clipId(voiceOf(b.who),text):null;
+  if(cid){
+    playClip(cid,null,(failed)=>go(failed?readMs:420));
+    p.safety=setTimeout(()=>go(0),readMs+text.length*80+5000);
+  } else if(voiceOn && ttsWorks!==false && "speechSynthesis" in window){
+    let started=false;
+    try{
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(text); u.lang="en-US"; if(enVoice)u.voice=enVoice; u.rate=.92; u.pitch=b.who?(PITCH[b.who]||1):1;
+      u.onstart=()=>{ started=true; ttsWorks=true; };
+      u.onend=()=>go(450); u.onerror=()=>{ if(started) go(450); };
+      speechSynthesis.speak(u);
+    }catch(e){ go(readMs); return; }
+    p.timer=setTimeout(()=>{ if(!started && play===p && p.token===tok){ ttsWorks=false; go(Math.max(200,readMs-1600)); } },1600);
+    p.safety=setTimeout(()=>go(0),readMs+text.length*70+3500);
+  } else p.timer=setTimeout(()=>go(0),readMs);
+}
+function finishBeats(){ stopBeats(); S.playing=false; S.paused=false; render(); }
+function pauseBeats(){
+  const p=play; if(!p||S.paused) return;
+  S.paused=true; p.token++; clearTimeout(p.timer); clearTimeout(p.safety);
+  stopClip(); try{ speechSynthesis.cancel(); }catch(e){}
+  renderHand(); renderHint();
+}
+function resumeBeats(){
+  const p=play; if(!p||!S.paused) return;
+  S.paused=false; renderHand(); renderHint();
+  const b=p.beats[p.i-1];
+  if(b) speakBeat(p,b,++p.token); else p.timer=setTimeout(nextBeat,300);
+}
+function skipBeats(){
+  const p=play; if(!p) return; S.paused=false;
+  try{ speechSynthesis.cancel(); }catch(e){} stopClip();
+  stopBeats();
+  while(p.i<p.beats.length) showBeat(p.beats[p.i++]);
+  finishBeats();
+}
+function unlockTTS(){ if(!voiceOn) return; try{ const u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u); }catch(e){} }
+
+function applyOp(op,anims){
+  const [k,w,a,b]=op; const t=thing(w);
+  switch(k){
+    case "add":{
+      if(t) return;
+      const o=a||{}; const ch=W[w].cat==="character";
+      const nC=S.things.filter(x=>x.char&&!x.gone).length, nP=S.things.filter(x=>!x.char&&!x.gone).length;
+      S.things.push({id:++uid,w,char:ch,x:o.x??(ch?14+nC*18:64+nP*12),y:o.y??(ch?8:((PLACE_LOOK[placeOf(S.sc)]||{}).propY||8)),size:o.size||null,feeling:null,asleep:false});
+      break;}
+    case "remove": if(t){ t.gone="vanish"; } break;
+    case "move": if(t){ t.x=a; t.y=b; } break;
+    case "feel": if(t){ t.feeling=a; anims.push([w,"a-feel"]); } break;
+    case "sleep": if(t) t.asleep=true; break;
+    case "wake": if(t) t.asleep=false; break;
+    case "anim": if(t) anims.push([w,a]); break;
+    case "spin": if(t) anims.push([w,"spin"]); break;
+    case "eat":{ const f=thing(a); if(t&&f){ anims.push([w,"a-eat",f.id]); f.gone="gobble"; } break; }
+    case "sky": S.sky=w; break;
+  }
+}
+
+function undo(){ if(S.hist.length) rewindTo(S.hist.length-1); }
+function rewindTo(k){
+  if(k<0||k>=S.hist.length) return;
+  stopClip(); try{ speechSynthesis.cancel(); }catch(e){}
+  const h=S.hist.slice(0,k); const prev=S.hist[k]; const learned=S.learned;
+  S={...prev,hist:h,learned:Array.from(new Set([...prev.learned,...learned]))};
+  stopBeats(); S.playing=false; S.paused=false; S.ended=null; S.says=[]; S.narr={s:nodeOf().ask,kind:"q"};
+  clearStage(); booting=true; render(); booting=false; say(plain(nodeOf().ask));
+}
+function restart(){ stopBeats(); try{speechSynthesis.cancel();}catch(e){} S=fresh(); clearStage(); render(); }
+function clearStage(){ $("#story").dataset.n="9999";  thingEls.clear(); $("#things").innerHTML=""; $("#balloons").innerHTML=""; poseTimers.forEach(p=>{clearInterval(p.iv);clearTimeout(p.to);}); poseTimers.clear(); }
+
+/* ---------- render ---------- */
+const thingEls=new Map();
+function render(anims){
+  const st=$("#stage"); st.classList.toggle("open",!!S.sc);
+  const sc=$("#scene");
+  if(sc.dataset.place!==(S.sc||"")){ sc.dataset.place=S.sc||""; sc.innerHTML=S.sc?scene(placeOf(S.sc)):""; }
+  $("#sky").className="sky "+(S.sky||"clear");
+  renderThings(anims||[]);
+  renderStory(); renderNarr(); renderHand(); renderHint(); renderEnd(); renderLevels(); renderBalloons();
+  updateChips();
+  const all=PLACES.reduce((n,p)=>n+endingsOf(p).length,0), got=PLACES.reduce((n,p)=>n+(found[p]||[]).length,0);
+  $("#endcount").textContent=S.sc?`${(found[S.sc]||[]).length}/${endingsOf(S.sc).length}`:`${got}/${all}`;
+  try{ window.claude?.hot?.snapshot?.(()=>S); }catch(e){}
+}
+
+const poseTimers=new Map();
+function drawThing(t,el){
+  const key=[t.feeling,t.asleep,t.mouth,t.pose,t.frame].join("|");
+  if(el.dataset.k!==key){ el.dataset.k=key; el.querySelector(".em").innerHTML=art(t.w,{mood:t.feeling,asleep:t.asleep,mouth:t.mouth,pose:t.pose,frame:t.frame}); }
+}
+function redraw(t){ const el=thingEls.get(t.id); if(el) drawThing(t,el); }
+function setPose(t,pose,ms){
+  const p=poseTimers.get(t.id); if(p){clearInterval(p.iv);clearTimeout(p.to);}
+  t.pose=pose; t.frame=0; redraw(t);
+  const iv=["walk","run","dance"].includes(pose)?setInterval(()=>{t.frame=t.frame?0:1;redraw(t);},150):null;
+  const to=setTimeout(()=>{clearInterval(iv);t.pose=null;t.frame=0;redraw(t);poseTimers.delete(t.id);},ms);
+  poseTimers.set(t.id,{iv,to});
+}
+function walkTo(t,el,from){
+  const ms=Math.round(450+Math.abs(t.x-from)*11);
+  el.style.transitionDuration=ms+"ms";
+  el.classList.toggle("flip",t.x<from);
+  setPose(t,"walk",ms);
+  setTimeout(()=>el.classList.remove("flip"),ms);
+}
+const POSE_OF={"a-eat":"eat","a-sing":"sing","a-run":"run","a-jump":"jump","a-hug":"hug","a-hide":"hide","a-climb":"climb","a-swim":"swim","a-bake":"bake","a-play":"play","a-read":"read","a-dance":"dance","a-laugh":"laugh","a-think":"think","a-point":"point","a-hop":"hop","a-fly":"fly"};
+function renderThings(anims){
+  const box=$("#things"); const live=new Set();
+  S.things.forEach(t=>{
+    live.add(t.id);
+    let el=thingEls.get(t.id); const isNew=!el;
+    if(isNew){
+      el=document.createElement("button"); el.type="button";
+      el.className="thing"+(t.char?"":" prop enter");
+      el.innerHTML=`<span class="em"></span><span class="name">${label(t.w)}</span>`;
+      el.addEventListener("animationend",ev=>{ if(ev.target===el) el.className=el.className.replace(/\b(enter|a-[a-z]+)\b/g,"").trim(); });
+      el.addEventListener("click",()=>showPop(t.w));
+      el.setAttribute("aria-label",label(t.w));
+      box.appendChild(el); thingEls.set(t.id,el);
+      if(t.size){ el.style.width=(t.size*1.1)+"px"; el.style.height=(t.size*1.32)+"px"; }
+    }
+    el.style.bottom=t.y+"%";
+    const prev=el.dataset.x!==undefined?+el.dataset.x:null;
+    if(isNew && t.char && !booting){
+      const from=t.x>55?114:-14;
+      el.style.transition="none"; el.style.left=from+"%"; void el.offsetWidth; el.style.transition="";
+      requestAnimationFrame(()=>{ el.style.left=t.x+"%"; });
+      walkTo(t,el,from);
+    } else {
+      if(prev!==null && prev!==t.x && t.char) walkTo(t,el,prev);
+      else if(prev!==null && prev!==t.x) el.style.transitionDuration="900ms";
+      el.style.left=t.x+"%";
+    }
+    el.dataset.x=t.x;
+    el.classList.toggle("asleep",!!t.asleep);
+    drawThing(t,el);
+  });
+  // one animation per element, real actions beat the small "feeling" hop
+  const pick=new Map();
+  anims.forEach(a=>{ const cur=pick.get(a[0]); if(!cur||cur[1]==="a-feel") pick.set(a[0],a); });
+  pick.forEach(([w,cls,target])=>{
+    const t=S.things.find(x=>x.w===w&&!x.gone); const el=t&&thingEls.get(t.id); if(!el) return;
+    const delay = el.style.transitionDuration && parseInt(el.style.transitionDuration)>0 && thingEls.size ? 0 : 0;
+    if(cls==="spin"){ el.classList.remove("spin"); void el.offsetWidth; el.classList.add("spin"); setTimeout(()=>el.classList.remove("spin"),950); return; }
+    if(cls==="a-eat"&&target){ const tel=thingEls.get(target); if(tel) el.style.setProperty("--dx",(tel.offsetLeft-el.offsetLeft-30)+"px"); }
+    el.className=el.className.replace(/\b(enter|a-[a-z]+)\b/g,"").trim(); void el.offsetWidth; el.classList.add(cls);
+    if(POSE_OF[cls]) setPose(t,POSE_OF[cls],1400);
+    const P={"a-eat":["crumb",8,700],"a-hug":["heart",6,300],"a-sing":["note",5,150],"a-dance":["note",6,150],"a-laugh":["star",4,200],"a-jump":["dust",5,650],"a-run":["dust",6,300],"a-swim":["drop",8,200],"a-dig":["sand",10,200],"a-feel":t.feeling==="happy"?["star",4,200]:null,"a-fly":["dust",3,200]}[cls];
+    if(P) setTimeout(()=>burst(t.x,t.y+(P[0]==="dust"||P[0]==="sand"?0:18),P[0],P[1]),P[2]+delay);
+  });
+  // things leaving the stage
+  S.things.filter(t=>t.gone).forEach(t=>{
+    const el=thingEls.get(t.id);
+    if(el && !el.dataset.leaving){ el.dataset.leaving="1"; el.classList.add(t.gone); }
+    setTimeout(()=>{ S.things=S.things.filter(x=>x.id!==t.id); if(el) el.remove(); thingEls.delete(t.id); },1100);
+  });
+  for(const [id,el] of thingEls){ if(!live.has(id)){ el.remove(); thingEls.delete(id);} }
+}
+
+function richText(str){
+  const span=document.createElement("span"); let last=0;
+  for(const m of str.matchAll(TAG)){
+    if(m.index>last) span.appendChild(document.createTextNode(str.slice(last,m.index)));
+    const k=document.createElement("button"); k.type="button"; k.className="kw"; k.textContent=tagText(str,m.index,m[1],m[2]);
+    k.style.setProperty("--cat",catColor(m[1])); k.onclick=()=>showPop(m[1]); span.appendChild(k);
+    last=m.index+m[0].length;
+  }
+  if(last<str.length) span.appendChild(document.createTextNode(str.slice(last)));
+  return span;
+}
+
+function renderBalloons(){
+  const box=$("#balloons"); box.innerHTML="";
+  if(!S.says||!S.says.length) return;
+  const by=new Map(); S.says.forEach(x=>by.set(x.who,(by.has(x.who)?by.get(x.who)+" ":"")+x.s));
+  const entries=[...by.entries()];
+  const box2=(e)=>({l:e.offsetLeft,t:e.offsetTop,r:e.offsetLeft+e.offsetWidth,b:e.offsetTop+e.offsetHeight});
+  const placed=[];
+  // place the last speaker first at its natural height, earlier speakers go above: read top to bottom
+  entries.slice().reverse().forEach(([who,txt])=>{
+    const order=entries.findIndex(x=>x[0]===who);
+    let t=thing(who); const off=!t; if(off) t={x:80,y:30,id:-1}; const el=!off&&thingEls.get(t.id);
+    const b=document.createElement("div"); b.className="balloon"+(S.ended?" fade":"")+(off?" phone":"");
+    if(off){ const n=document.createElement("b"); n.textContent="📱 "+cap(label(who))+": "; b.appendChild(n); }
+    b.appendChild(richText(txt));
+    if(t.x<55){ b.style.left=Math.max(1,t.x-8)+"%"; } else { b.style.right=Math.max(1,100-t.x-8)+"%"; b.classList.add("tr"); }
+    const h=(el?el.offsetHeight:100)+4; let lift=0;
+    b.style.bottom=`calc(${t.y}% + ${h}px)`; box.appendChild(b);
+    for(let guard=0;guard<6;guard++){
+      const r=box2(b); const hit=placed.find(p=>{const q=box2(p);return !(r.r<q.l||r.l>q.r||r.b<q.t||r.t>q.b);});
+      if(!hit) break;
+      lift+=r.b-box2(hit).t+8; b.style.bottom=`calc(${t.y}% + ${h+lift}px)`;
+      const top=($("#narr").offsetHeight||0)+4;
+      if(b.offsetTop<top){ lift-=top-b.offsetTop; b.style.bottom=`calc(${t.y}% + ${h+lift}px)`; break; }
+    }
+    const d=S.playing?0.05:order*0.5+0.3; b.style.animationDelay=S.ended?`${d}s, ${d+3}s`:`${d}s`;
+    placed.push(b);
+  });
+}
+
+function renderLevels(){
+  const nav=$("#levels"); nav.hidden=!!S.sc; nav.innerHTML="";
+  if(S.sc) return;
+  LEVELS.forEach(L=>{
+    const scs=PLACES.filter(p=>SC[p].level===L.n);
+    const all=scs.reduce((n,p)=>n+endingsOf(p).length,0), got=scs.reduce((n,p)=>n+(found[p]||[]).length,0);
+    const b=document.createElement("button"); b.type="button"; b.className="lvl"; b.setAttribute("aria-pressed",level===L.n);
+    b.innerHTML=`<b>${L.n} · ${L.name}</b><small>★ ${got}/${all} endings</small>`;
+    b.onclick=()=>{ level=L.n; try{localStorage.setItem("sc-level",level);}catch(e){} render(); };
+    nav.appendChild(b);
+  });
+}
+
+function renderNarr(){
+  const n=$("#narr"); n.hidden=!S.sc; if(!S.sc) return;
+  $("#caption").textContent=SC[S.sc].title;
+  const p=$("#narrText");
+  const last=S.story[S.story.length-1];
+  const src=(miniStage&&last&&last.who&&S.says&&S.says.length)?{s:last.s,who:last.who}:S.narr;
+  const k=src?src.s+"|"+(src.kind||"")+"|"+(src.who||""):"";
+  if(p.dataset.k===k) return;
+  p.dataset.k=k; p.innerHTML=""; p.className=src&&src.kind==="q"?"q":"";
+  if(src&&src.who){ const b=document.createElement("b"); b.className="nwho"; b.textContent=cap(label(src.who))+": "; p.appendChild(b); }
+  if(src) p.appendChild(richText(src.s));
+  void p.offsetWidth; p.classList.add("in");
+}
+function storyLine(e){
+  const li=document.createElement("li"); li.className="line"+(e.kind?" "+e.kind:"")+(e.who?" speech":"");
+  const b=document.createElement("button"); b.className="say"; b.type="button"; b.textContent=e.kind==="q"?"❓":"🔊"; b.setAttribute("aria-label","Listen");
+  b.onclick=()=>say(plain(e.s),e.who);
+  const span=document.createElement("span"); span.className="txt";
+  if(e.who){
+    const w=document.createElement("span"); w.className="who"; w.textContent=cap(label(e.who))+" "+(FLAG[accentOf(e.who)]||"")+":"; w.title=accentOf(e.who)==="UK"?"British accent":"American accent"; w.style.setProperty("--who",catColor(e.who));
+    const q=richText(e.s); q.className="quote"; q.prepend("“"); q.append("”");
+    span.append(w,q);
+  } else span.appendChild(richText(e.s));
+  li.append(b,span); return li;
+}
+function renderStory(){
+  const ol=$("#story");
+  if(!S.sc){
+    ol.innerHTML=""; ol.dataset.n="0";
+    const L=LEVELS.find(x=>x.n===level);
+    const li=document.createElement("li"); li.className="line intro";
+    li.innerHTML=`<span class="say" aria-hidden="true">✎</span><span class="txt"><b>Chapter ${L.n} · ${L.name}.</b> ${L.blurb} Each scene is a real-life situation: you play the cards, they're your lines. Every phrase, word and grammar point comes from your drills.</span>`;
+    ol.appendChild(li); return;
+  }
+  let n=+(ol.dataset.n||0);
+  if(n>S.story.length || ol.querySelector(".intro")){ ol.innerHTML=""; n=0; }
+  for(let i=n;i<S.story.length;i++) ol.appendChild(storyLine(S.story[i]));
+  ol.dataset.n=S.story.length;
+  const box=$("#storyBox"); box.scrollTop=box.scrollHeight;
+}
+const cap=x=>x[0].toUpperCase()+x.slice(1);
+
+function renderHint(){
+  const h=$("#hint");
+  h.textContent = !S.sc ? "Pick a chapter, then drag a scene card onto the stage. Tap a card to turn it over."
+    : S.paused ? "Paused. Tap ▶ to continue, or tap the bar to go back."
+    : S.playing ? "Listen… the scene is playing."
+    : S.ended ? "Change your last card to find another ending."
+    : "Your turn: drag the line you want to say onto the stage.";
+  const u=$("#undoHost"); u.innerHTML="";
+  renderCtrl();
+}
+let miniStage=false; try{ miniStage=localStorage.getItem("sc-mini")==="1"; }catch(e){}
+function setMini(v){ miniStage=v; try{ localStorage.setItem("sc-mini",v?"1":"0"); }catch(e){} $("#stage").classList.toggle("mini",v); $("#narrText").dataset.k=""; renderNarr(); renderCtrl(); if(!v){ renderThings([]); renderBalloons(); } }
+function renderCtrl(){
+  const c=$("#ctrl"); c.hidden=!S.sc; if(!S.sc){ $("#stage").classList.remove("mini"); return; }
+  $("#stage").classList.toggle("mini",miniStage);
+  const back=$("#cbBack"), pl=$("#cbPlay"), sk=$("#cbSkip"), mi=$("#cbMini");
+  back.disabled=!S.hist.length;
+  pl.hidden=!S.playing; pl.textContent=S.paused?"▶":"⏸"; pl.setAttribute("aria-label",S.paused?"Play":"Pause");
+  sk.hidden=!S.playing;
+  mi.textContent=miniStage?"▾":"▴"; mi.setAttribute("aria-label",miniStage?"Show the stage":"Hide the stage");
+  const tl=$("#tl"); tl.innerHTML="";
+  S.hist.forEach((h,k)=>{ const b=document.createElement("button"); b.type="button"; b.setAttribute("aria-label",`Go back to step ${k+1}`); b.title=`Back to step ${k+1}`; b.onclick=()=>rewindTo(k); tl.appendChild(b); });
+  const cur=document.createElement("div"); cur.className="cur"+(S.ended&&!S.playing?" end":"");
+  const frac=S.playing&&play?Math.min(1,play.i/play.beats.length):1;
+  cur.innerHTML=`<i style="width:${frac*100}%"></i>`; tl.appendChild(cur);
+}
+$("#cbMenu").onclick=()=>{ restart(); try{ $("#levels").scrollIntoView({block:"nearest"}); }catch(e){} };
+$("#cbBack").onclick=undo;
+$("#cbPlay").onclick=()=>{ S.paused?resumeBeats():pauseBeats(); };
+$("#cbSkip").onclick=skipBeats;
+$("#cbMini").onclick=()=>setMini(!miniStage);
+
+function renderHand(){
+  const hand=$("#hand"); hand.innerHTML="";
+  hand.hidden=!!(S.ended&&!S.playing);
+  if(S.playing){ hand.innerHTML=S.paused?`<div class="paused-note">⏸ Paused</div>`:`<div class="waiting"><span>🎧 Listen…</span></div>`; hand.dataset.dealt=""; return; }
+  if(S.ended) return;
+  const dealKey=(S.sc||"")+"|"+(S.node||"")+"|"+level; const deal=hand.dataset.dealt!==dealKey; hand.dataset.dealt=dealKey;
+  const n=nodeOf();
+  const ws=S.sc?Object.keys(n.cards):PLACES.filter(p=>SC[p].level===level);
+  ws.forEach(w=>{
+    const d=W[w];
+    const done = S.sc ? explored(S.sc,n.cards[w]) : endingsOf(w).every(e=>isFound(w,e.id));
+    const c=document.createElement("div"); c.className="card"+(d.cat==="phrase"?" phrase":"")+(deal?" deal":""); c.tabIndex=0; c.dataset.w=w;
+    if(deal) c.style.animationDelay=(hand.children.length*90)+"ms";
+    c.style.setProperty("--cat",catColor(w));
+    c.setAttribute("aria-label",label(w)+", "+d.tag+(done?", all endings found":""));
+    if(d.cat==="phrase") c.style.setProperty("--cat","var(--c-phrase)");
+    const sub = S.sc ? "" : `<div class="tag" style="background:var(--night-2);color:var(--gold)">${SC[w].title}</div>`;
+    c.innerHTML=`<div class="in">
+      <div class="face front"><div class="tag">${d.tag}</div>${done?'<span class="star" title="All endings found">★</span>':""}${d.cat==="phrase"?`<div class="phr"><span>${d.text}</span></div>`:`<div class="pic">${art(w)}</div>`}<div class="word">${label(w)}</div><button class="place-btn" type="button" data-act="place">${S.sc?"▲ say it":"▲ play"}</button></div>
+      <div class="face back"><div class="w">${label(w)}</div><div class="bk"><div class="def">${d.def}</div>${d.ex?`<div class="ex">${d.cat==="phrase"?d.ex:"“"+d.ex+"”"}</div>`:""}</div>
+        <div class="row"><button type="button" data-act="say" aria-label="Listen">🔊</button><button type="button" data-act="more">More</button></div></div>
+    </div>`;
+    c.addEventListener("click",e=>{
+      const act=e.target.closest("[data-act]")?.dataset.act;
+      if(act==="place"){ e.stopPropagation(); tryPlay(c); }
+      else if(act==="say"){ e.stopPropagation(); say(label(w)); }
+      else if(act==="more"){ e.stopPropagation(); showPop(w); }
+    });
+    c.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); flip(c); } });
+    hand.appendChild(c); fitBack(c);
+  });
+}
+/* shrink the text on the back of a card until it fits, then hide the example if it still doesn't */
+function fitBack(c){
+  const bk=c.querySelector(".bk"), def=c.querySelector(".back .def"), ex=c.querySelector(".back .ex"), w=c.querySelector(".back .w");
+  if(!bk) return;
+  def.style.fontSize=""; if(ex){ ex.style.fontSize=""; ex.style.display=""; } w.style.fontSize="";
+  if(w.scrollHeight>44) w.style.fontSize="13px";
+  let fs=11.5;
+  while(bk.scrollHeight>bk.clientHeight+1 && fs>9){ fs-=.5; def.style.fontSize=fs+"px"; if(ex) ex.style.fontSize=(fs-1)+"px"; }
+  if(ex && bk.scrollHeight>bk.clientHeight+1) ex.style.display="none";
+}
+try{ document.fonts.ready.then(()=>document.querySelectorAll(".card").forEach(fitBack)); }catch(e){}
+
+function renderEnd(){
+  const ec=$("#endcard"); const p=$("#endpanel");
+  if(!S.ended){ ec.innerHTML=""; p.hidden=true; p.innerHTML=""; return; }
+  if(S.playing){ p.hidden=true; }
+  if(!ec.innerHTML){ setTimeout(()=>burst(50,50,"star",14),250); }
+  ec.innerHTML=`<div class="endcard"><small>THE END</small><b>${S.ended}</b></div>`;
+  const list=endingsOf(S.sc);
+  const got=list.filter(e=>isFound(S.sc,e.id)).length;
+  if(S.playing) return;
+  p.hidden=false;
+  setTimeout(()=>{ const box=$("#storyBox"); box.scrollTop=Math.max(0,p.offsetTop-150); },60);
+  p.innerHTML=`<h2>${SC[S.sc].title}: endings found <span>${got}/${list.length}</span></h2>
+    <ul class="endings">${list.map(e=>isFound(S.sc,e.id)?`<li class="${e.id===S.node?"now":""}">${e.title}</li>`:`<li class="unk">???</li>`).join("")}</ul>
+    <div class="insc"></div><div class="actions"></div>`;
+  const its=storyItems(S.sc,S.node), gs=sceneGram(S.sc,S.node), ps=scenePat(S.sc,S.node);
+  const nPh=its.filter(i=>i.type==="chunk"||i.type==="sphrase").length, nW=its.filter(i=>i.type==="vocab"||i.type==="word").length;
+  const ins=p.querySelector(".insc");
+  ins.innerHTML=`<small class="k">In this scene</small><div class="chips"><span>💬 ${nPh} phrases</span><span>🔤 ${nW} words</span>${ps.map(i=>`<button type="button" class="pchip" data-p="${i}">🧱 ${esc(PATTERNS[i][0])}</button>`).join("")}${gs.map(g=>{ const G=GRAMMAR.find(x=>x.id===g); return G?`<button type="button" class="gchip" data-g="${g}">✏️ ${esc(G.title)}</button>`:""; }).join("")}</div>`;
+  ins.querySelectorAll(".pchip").forEach(b=>b.onclick=()=>{ showView("rx"); renderRxPack("patterns"); setTimeout(()=>{ const c=document.querySelectorAll("#rxView .rxcard")[+b.dataset.p]; if(c){ try{c.scrollIntoView({block:"center"});}catch(e){} c.classList.add("flash"); } },60); });
+  ins.querySelectorAll(".gchip").forEach(b=>b.onclick=()=>{ showView("grammar"); renderLesson(GRAMMAR.find(x=>x.id===b.dataset.g)); });
+  const a=p.querySelector(".actions");
+  a.append(mkBtn("🔁 Drill this scene","btn",()=>{ showView("rx"); startRx(shuffle(its).slice(0,18),"story"); }));
+  if(S.hist.length) a.append(mkBtn("⏮ Change my last card","btn ghost",undo));
+  a.append(mkBtn("🔊 Read my story","btn ghost",()=>say(S.story.filter(e=>e.kind!=="q").map(e=>plain(e.s)).join(" "))));
+  const nx=PLACES.filter(p=>SC[p].level===SC[S.sc].level); const nsc=nx[(nx.indexOf(S.sc)+1)%nx.length];
+  a.append(mkBtn("Next scene ▸","btn ghost",()=>{ restart(); playCard(nsc); }));
+  a.append(mkBtn("All scenes","btn ghost",restart));
+}
+function burst(xp,yp,kind,n){
+  const st=$("#stage");
+  for(let i=0;i<n;i++){
+    const p=document.createElement("span"); p.className="part"; p.innerHTML=particleSvg(kind);
+    const ang=Math.random()*Math.PI*2, dist=30+Math.random()*50;
+    p.style.left=xp+"%"; p.style.bottom=(yp+14)+"%";
+    p.style.setProperty("--dx",Math.cos(ang)*dist+"px");
+    p.style.setProperty("--dy",(kind==="dust"||kind==="sand"?-Math.abs(Math.sin(ang))*20:-30-Math.abs(Math.sin(ang))*dist)+"px");
+    p.style.setProperty("--r",(Math.random()*120-60)+"deg");
+    p.style.animationDelay=(i*25)+"ms";
+    st.appendChild(p); setTimeout(()=>p.remove(),1400);
+  }
+}
+function mkBtn(t,c,f){const b=document.createElement("button");b.type="button";b.className=c;b.textContent=t;b.onclick=f;return b;}
+
+function flip(c){ c.classList.toggle("flipped"); if(c.classList.contains("flipped")) say(label(c.dataset.w)); }
+function tryPlay(c){ if(!playCard(c.dataset.w)) c.classList.remove("lifted"); }
+
+/* ---------- drag to stage ---------- */
+let drag=null;
+$("#hand").addEventListener("pointerdown",e=>{
+  const c=e.target.closest(".card"); if(!c||e.target.closest("button")) return;
+  drag={c,x:e.clientX,y:e.clientY,moved:false,on:false,ghost:null};
+});
+window.addEventListener("pointermove",e=>{
+  if(!drag) return;
+  const dx=e.clientX-drag.x, dy=drag.y-e.clientY;
+  if(Math.hypot(dx,dy)>8) drag.moved=true;
+  if(!drag.on && dy>12 && dy>Math.abs(dx)){
+    drag.on=true;
+    const g=drag.c.cloneNode(true); g.className="card ghost-card"+(drag.c.classList.contains("flipped")?" flipped":"");
+    document.body.appendChild(g); drag.ghost=g; drag.c.classList.add("lifted");
+  }
+  if(drag.on){
+    e.preventDefault();
+    drag.ghost.style.left=e.clientX+"px"; drag.ghost.style.top=e.clientY+"px";
+    $("#stage").classList.toggle("drop-ok",overStage(e));
+  }
+},{passive:false});
+function overStage(e){ const r=$("#stage").getBoundingClientRect(); return e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom+40; }
+function endDrag(e,cancel){
+  if(!drag) return;
+  const d=drag; drag=null;
+  $("#stage").classList.remove("drop-ok");
+  if(d.ghost) d.ghost.remove();
+  if(d.on){ if(!cancel && overStage(e)) tryPlay(d.c); else d.c.classList.remove("lifted"); }
+  else if(!d.moved && !cancel) flip(d.c);
+}
+window.addEventListener("pointerup",e=>endDrag(e,false));
+window.addEventListener("pointercancel",e=>endDrag(e,true));
+
+/* ---------- word popover ---------- */
+function showPop(w){
+  const d=W[w]; const host=$("#popHost");
+  host.innerHTML=`<div class="pop" role="dialog" aria-label="${label(w)}" style="--cat:${catColor(w)}">
+    <div class="t">${d.tag}</div><h3>${d.cat==="phrase"?"":art(w)}${d.cat==="phrase"?"“"+label(w)+"”":label(w)}</h3>
+    <p>${d.def}</p>${d.ex?`<p class="ex">${d.cat==="phrase"?d.ex:"“"+d.ex+"”"}</p>`:""}
+    <div class="row"><button type="button" id="p1">🔊 word</button><button type="button" id="p2">🔊 example</button><button type="button" id="p3">Close</button></div></div>`;
+  $("#p1").onclick=()=>say(label(w)); $("#p2").onclick=()=>say(d.ex); $("#p3").onclick=()=>host.innerHTML="";
+  $("#p3").focus(); say(label(w));
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("#popHost").innerHTML=""; });
+document.addEventListener("pointerdown",e=>{ if(!e.target.closest(".pop,.kw,.thing")) $("#popHost").innerHTML=""; });
+
+$("#narr").addEventListener("click",e=>{ if(!e.target.closest(".kw")) skipBeats(); });
+$("#voice").onclick=()=>{ voiceOn=!voiceOn; ttsWorks=null; $("#voice").setAttribute("aria-pressed",voiceOn); try{localStorage.setItem("sc-voice",voiceOn?"on":"off");}catch(e){} if(!voiceOn){ try{speechSynthesis.cancel();}catch(e){} stopClip(); } };
+$("#voice").setAttribute("aria-pressed",voiceOn);
+
+/* ---------- menu ---------- */
+let view="menu";
+const TABV={menu:"menu",story:"story",rx:"rx",grammar:"grammar",quiz:"menu"};
+function showView(v){
+  view=v;
+  ["menu","rx","story","quiz","grammar"].forEach(x=>{ $("#"+x+"View").hidden=v!==x; });
+  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===TABV[v]?"page":"false"));
+  if(v!=="story"){ stopBeats(); stopClip(); try{speechSynthesis.cancel();}catch(e){} if(S.playing){ S.playing=false; } }
+  if(v==="menu") renderToday();
+  if(v==="story") render();
+  if(v==="quiz") startQuiz();
+  if(v==="grammar") renderGrammarList();
+  if(v==="rx") renderRxHome();
+  updateChips();
+  const el=$("#"+v+"View"); if(el) el.scrollTop=0;
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>showView(b.dataset.v));
+
+/* ---------- spaced repetition: one place for every phrase, word and grammar point ---------- */
+const INTERVALS=[0,1,2,4,7,15,30];
+const today=()=>{ const d=new Date(); return Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/864e5); };
+const RX_DEFAULT=()=>({items:{},streak:0,lastDay:null,newDay:null,newCount:0,perDay:15,wPerDay:20,newW:0,timer:10,ansDay:null,ans:0});
+let RX=RX_DEFAULT();
+try{ RX=Object.assign(RX,JSON.parse(localStorage.getItem("sc-rx")||"{}")||{}); }catch(e){}
+const rxSave=()=>{ try{ localStorage.setItem("sc-rx",JSON.stringify(RX)); }catch(e){} };
+const speakT=t=>t.replace(/…/g,"").trim();
+const PACK_ICON={react:"😮",flow:"💬",opinion:"🤔",ask:"❓",small:"☕",plans:"📅",favors:"🙏",feel:"💛",verbs:"⚡",bye:"👋",home:"🏠",food:"🍕",money:"💸",move:"🚕",work:"💼",phone:"📱",health:"🤒",out:"🍻",people:"❤️",mood:"😤",slang:"😎",timex:"⏰",little:"🔤",phrasal:"🧩",patterns:"🧱",stories:"🎬"};
+const ALLRX=[]; KIT.forEach(p=>p.chunks.forEach((c,i)=>ALLRX.push({key:`c:${p.id}:${i}`,type:"chunk",pack:p.id,text:c[0],mean:c[1],sit:c[2]})));
+PATTERNS.forEach((p,i)=>ALLRX.push({key:`p:${i}`,type:"pattern",pack:"patterns",frame:p[0],use:p[1],ex:p[2],fill:p[3],build:p[4]}));
+const ITEM={}; ALLRX.forEach(it=>ITEM[it.key]=it);
+const BAND=250;
+const VOC=WORDS.map((w,i)=>({key:"v:"+i,type:"vocab",pack:"words",i,word:w[0],emo:w[1],def:w[2],ex:w[3],form:(w[3].match(/\*([^*]+)\*/)||[])[1]||w[0],band:Math.floor(i/BAND)}));
+VOC.forEach(it=>ITEM[it.key]=it);
+const NBANDS=Math.ceil(VOC.length/BAND);
+const exPlain=it=>it.ex.replace(/\*/g,"");
+const exHTML=it=>esc(it.ex).replace(/\*([^*]+)\*/,"<mark>$1</mark>");
+const exGap=it=>esc(it.ex).replace(/\*([^*]+)\*/,'<span class="gap">&nbsp;?&nbsp;</span>');
+const vNear=(it,n)=>{ const lo=Math.max(0,it.i-200), hi=Math.min(VOC.length,it.i+200); const pool=[]; for(let j=lo;j<hi;j++) if(j!==it.i) pool.push(VOC[j]); return shuffle(pool).slice(0,n); };
+function itemOf(key){
+  if(ITEM[key]) return ITEM[key];
+  if(key.startsWith("w:")){ const k=key.slice(2); if(!W[k]) return null; return ITEM[key]={key,type:W[k].cat==="phrase"?"sphrase":"word",k,pack:"stories"}; }
+  if(key.startsWith("g:")){ const [,id,i]=key.split(":"); const g=GRAMMAR.find(x=>x.id===id); if(!g||!g.practice[+i]) return null; return ITEM[key]={key,type:"gram",g,i:+i,pack:"grammar"}; }
+  return null;
+}
+// new items: one from each pack in turn, so every day mixes situations
+const NEWORDER=(()=>{ const byPack={}; ALLRX.forEach(it=>(byPack[it.pack]=byPack[it.pack]||[]).push(it)); const out=[]; let more=true,i=0; while(more){ more=false; for(const k of Object.keys(byPack)){ if(byPack[k][i]){ out.push(byPack[k][i]); more=true; } } i++; } return out; })();
+function rxToday(){
+  const d=today(); if(RX.newDay!==d){ RX.newDay=d; RX.newCount=0; RX.newW=0; }
+  const due=Object.keys(RX.items).filter(k=>RX.items[k].due<=d).map(itemOf).filter(Boolean)
+    .sort((a,b)=>RX.items[a.key].due-RX.items[b.key].due||RX.items[a.key].box-RX.items[b.key].box);
+  const fresh=NEWORDER.filter(it=>!RX.items[it.key]).slice(0,Math.max(0,(RX.perDay||15)-RX.newCount));
+  const freshW=[]; const wantW=Math.max(0,(RX.wPerDay??20)-(RX.newW||0));
+  for(let j=0;j<VOC.length&&freshW.length<wantW;j++) if(!RX.items[VOC[j].key]) freshW.push(VOC[j]);
+  return {due,fresh,freshW};
+}
+function sessionList(){
+  const t=rxToday(); const due=t.due.slice(0,40), fr=t.fresh.slice(), fw=t.freshW.slice(), out=[];
+  while(due.length||fr.length||fw.length){ if(due.length) out.push(due.shift()); if(due.length) out.push(due.shift()); if(fr.length) out.push(fr.shift()); if(fw.length) out.push(fw.shift()); }
+  if(out.length) return out;
+  const known=Object.keys(RX.items).map(itemOf).filter(Boolean).sort((a,b)=>RX.items[a.key].box-RX.items[b.key].box).slice(0,30);
+  return shuffle(known.length?known:NEWORDER.slice(0,10)).slice(0,12);
+}
+const liveStreak=()=>RX.lastDay!=null&&RX.lastDay>=today()-1?RX.streak:0;
+function updateChips(){ const s=$("#streak"); if(s) s.textContent=liveStreak(); }
+function rxGrade(key,ok,soft){
+  const d=today(), rec=RX.items[key]||{box:0,due:d};
+  if(!RX.items[key] && /^[cpv]:/.test(key)){ if(RX.newDay!==d){ RX.newDay=d; RX.newCount=0; RX.newW=0; } if(key[0]==="v") RX.newW=(RX.newW||0)+1; else RX.newCount++; }
+  if(ok && !soft){ rec.box=Math.min(6,rec.box+1); rec.due=d+INTERVALS[rec.box]; }
+  else if(ok){ rec.box=Math.max(1,rec.box); rec.due=d+1; }
+  else { rec.box=1; rec.due=d; }
+  RX.items[key]=rec;
+  if(RX.lastDay!==d){ RX.streak = RX.lastDay===d-1 ? (RX.streak||0)+1 : 1; RX.lastDay=d; }
+  if(RX.ansDay!==d){ RX.ansDay=d; RX.ans=0; } RX.ans++;
+  rxSave(); updateChips();
+}
+// every story ending puts its words and phrases into your reviews (spread over a few days)
+// a story word or phrase is the same item as in the phrase kit / the 3,000 words, so reviews stay unified
+function linkKey(k){ const d=W[k]; if(!d) return null; if(d.kit) return d.kit; if(d.voc!=null&&VOC[d.voc]) return "v:"+d.voc; if(d.cat==="place"||d.cat==="vocab") return null; return "w:"+k; }
+function rxAddStory(){
+  const d=today(); let n=0;
+  unlockedItems().keys.forEach(k=>{ const key=linkKey(k); if(key&&!RX.items[key]){ RX.items[key]={box:1,due:d+Math.floor(n/10)}; n++; } });
+  if(n) rxSave();
+}
+function storyItems(sc,endId){
+  const keys=new Set();
+  for(const id of ancestorsOf(sc,endId)){ const n=SC[sc].nodes[id];
+    n.lines.forEach(l=>{ const t=Array.isArray(l)?l[1]:l; for(const m of t.matchAll(TAG)) keys.add(m[1]); });
+    if(n.cards) Object.keys(n.cards).forEach(k=>keys.add(k)); }
+  const out=[...new Set([...keys].filter(k=>W[k]&&k!==sc).map(linkKey).filter(Boolean))].map(itemOf).filter(Boolean);
+  for(const i of scenePat(sc,endId)){ const it=itemOf("p:"+i); if(it&&!out.includes(it)) out.push(it); }
+  for(const i of sceneWords(sc,endId).slice(0,14)){ const it=itemOf("v:"+i); if(it&&!out.includes(it)) out.push(it); }
+  for(const g of sceneGram(sc,endId)){ const G=GRAMMAR.find(x=>x.id===g); if(G) shuffle(G.practice.map((_,i)=>i)).slice(0,2).forEach(i=>{ const it=itemOf("g:"+g+":"+i); if(it&&!out.includes(it)) out.push(it); }); }
+  return out;
+}
+function sceneGram(sc,endId){ const ids=ancestorsOf(sc,endId), gs=new Set();
+  for(const [g,list] of Object.entries(LIFE.GX)) for(const x of list) if(x[0]===sc && ids.has(x[3])) gs.add(g);
+  return GRAMMAR.map(g=>g.id).filter(g=>gs.has(g)); }
+// words from the 3,000 list that are spoken in the scene (simple forms: -s, -ed, -ing)
+const VIDX={}; VOC.forEach(v=>{ if(VIDX[v.word]==null) VIDX[v.word]=v.i; });
+const IRREG={went:"go",gone:"go",got:"get",gotten:"get",made:"make",said:"say",took:"take",came:"come",saw:"see",seen:"see",knew:"know",thought:"think",told:"tell",found:"find",gave:"give",left:"leave",felt:"feel",kept:"keep",brought:"bring",bought:"buy",sat:"sit",stood:"stand",lost:"lose",paid:"pay",met:"meet",ran:"run",wrote:"write",ate:"eat",drank:"drink",slept:"sleep",broke:"break",spent:"spend",sent:"send",forgot:"forget",flew:"fly",fell:"fall",woke:"wake",won:"win",heard:"hear",children:"child",men:"man",women:"woman",people:"people",feet:"foot",teeth:"tooth"};
+function vocOfToken(t){ t=t.toLowerCase(); if(IRREG[t]) t=IRREG[t];
+  for(const c of [t,t.replace(/s$/,""),t.replace(/es$/,""),t.replace(/ies$/,"y"),t.replace(/ed$/,""),t.replace(/d$/,""),t.replace(/ing$/,""),t.replace(/ing$/,"e"),t.replace(/(\w)\1ing$/,"$1"),t.replace(/(\w)\1ed$/,"$1"),t.replace(/ied$/,"y")]) if(VIDX[c]!=null) return VIDX[c];
+  return null; }
+function sceneWords(sc,endId){ const ids=ancestorsOf(sc,endId), seen=new Set();
+  for(const id of ids) for(const l of SC[sc].nodes[id].lines){ const t=plain(Array.isArray(l)?l[1]:l);
+    for(const tok of t.match(/[A-Za-z]+/g)||[]){ const i=vocOfToken(tok); if(i!=null&&i>=150) seen.add(i); } }
+  return [...seen].sort((a,b)=>b-a); }
+function scenePat(sc,endId){ const ids=ancestorsOf(sc,endId), ps=new Set();
+  for(const [i,list] of Object.entries(LIFE.PT)) for(const x of list) if(x[0]===sc && ids.has(x[1])) ps.add(+i);
+  return [...ps].sort((a,b)=>a-b); }
+const learnedCount=pack=>ALLRX.filter(it=>it.pack===pack&&RX.items[it.key]&&RX.items[it.key].box>=2).length;
+const pic=k=>W[k]&&W[k].cat==="place"&&SC[k]?placeIcon(placeOf(k)):art(k);
+
+/* ---------- Today ---------- */
+function storySuggestion(){
+  if(S.sc && !S.ended) return {sc:S.sc,cont:true};
+  const order=PLACES.slice().sort((a,b)=>SC[a].level-SC[b].level);
+  const sc=order.find(p=>!(found[p]||[]).length)||order.find(p=>(found[p]||[]).length<endingsOf(p).length)||order[0];
+  return {sc,cont:false};
+}
+function greet(){ const h=new Date().getHours(); return h<5?"Up late?":h<12?"Morning!":h<18?"Hey there!":"Evening!"; }
+function renderToday(){
+  const v=$("#menuView"); const t=rxToday(); const d=today();
+  const ans=RX.ansDay===d?RX.ans:0, left=Math.min(40,t.due.length)+t.fresh.length+t.freshW.length, done=!left;
+  const pct=ans+left?ans/(ans+left):1;
+  const ss=storySuggestion(), st=SC[ss.sc];
+  const gNext=GRAMMAR.find(g=>!gDone[g.id])||GRAMMAR[0];
+  const chunks=ALLRX.filter(x=>x.type==="chunk"), pod=chunks[(d*7)%chunks.length];
+  const started=Object.keys(RX.items).filter(k=>k[0]==="c"||k[0]==="p").length, wStarted=Object.keys(RX.items).filter(k=>k[0]==="v").length, solid=Object.entries(RX.items).filter(([k,r])=>r.box>=4).length;
+  const u=unlockedItems(), quizOk=u.keys.length>=4;
+  const all=PLACES.reduce((n,p)=>n+endingsOf(p).length,0), got=PLACES.reduce((n,p)=>n+(found[p]||[]).length,0);
+  const sk=liveStreak();
+  v.innerHTML=`
+  <div class="thead"><div><h2>${greet()}</h2><p>${sk?`🔥 ${sk} day${sk>1?"s":""} in a row. Keep it going!`:"10 minutes a day is all it takes."}</p></div>
+    <div class="ring" style="--p:${pct}" aria-label="${ans} answers today"><div><b>${ans}</b><small>today</small></div></div></div>
+  <div class="rxtoday"><small class="k">Step 1 · Your daily drill</small><h3>${done?"Done for today ✓":"Today's drill"}</h3>
+    <p>${done?"Nice. Your next reviews come back tomorrow. Want more? Do an extra round.":"Real phrases, fast answers. What you miss comes back until it's automatic."}</p>
+    <div class="rxstats"><span>🔁 ${Math.min(40,t.due.length)} to review</span><span>💬 ${t.fresh.length} new phrases</span><span>🔤 ${t.freshW.length} new words</span><span>⏱ ~${Math.max(2,Math.round((Math.min(40,t.due.length)+t.fresh.length*2+t.freshW.length*1.5)*0.22))} min</span></div>
+    <button class="btn" type="button" id="tStart">${done?"Extra round ▸":ans?"Keep going ▸":"Start ▸"}</button></div>
+  <button class="tile" type="button" id="tStory"><span class="tile-art">${placeIcon(placeOf(ss.sc))}</span><span class="tile-txt"><small class="k">Step 2 · See it live in a story</small><b>${ss.cont?"Continue: ":""}${esc(st.title)}</b><small>Chapter ${st.level} · ${esc(LEVELS[st.level-1].name)} · ★ ${(found[ss.sc]||[]).length}/${endingsOf(ss.sc).length} endings</small></span></button>
+  <button class="tile" type="button" id="tGram"><span class="tile-art">${art("read")}</span><span class="tile-txt"><small class="k">Step 3 · One grammar point</small><b>${esc(gNext.title)}</b><small>${esc(gNext.sub)}</small></span></button>
+  <div class="pod"><small class="k">Phrase of the day · ${PACK_ICON[pod.pack]} ${esc(KIT.find(p=>p.id===pod.pack).name)}</small><div class="top"><b>${esc(pod.text)}</b><button class="say-s" type="button" id="tPod" aria-label="Listen">🔊</button></div><span class="m">${esc(pod.mean)}</span><span class="s">When: ${esc(pod.sit)}</span></div>
+  ${quizOk?`<button class="tile slim" type="button" id="tQuiz"><span class="tile-txt"><small class="k">Bonus</small><b>Story quiz</b><small>Pictures, listening (🇺🇸/🇬🇧) and lines from your ${got} ending${got>1?"s":""}</small></span><span class="go">▸</span></button>`:""}
+  <div class="tstats"><span><b>${started}</b>phrases</span><span><b>${wStarted}</b>words</span><span><b>${solid}</b>solid ★</span><span><b>${got}/${all}</b>endings</span><span><b>${Object.keys(gDone).length}/${GRAMMAR.length}</b>lessons</span></div>`;
+  $("#tStart").onclick=()=>{ showView("rx"); startRx(sessionList(),"menu",{fillW:true}); };
+  $("#tStory").onclick=()=>{ if(ss.cont){ showView("story"); return; } level=st.level; try{localStorage.setItem("sc-level",level);}catch(e){} restart(); showView("story"); playCard(ss.sc); };
+  $("#tGram").onclick=()=>{ showView("grammar"); renderLesson(gNext); };
+  $("#tPod").onclick=()=>say(speakT(pod.text));
+  const q=$("#tQuiz"); if(q) q.onclick=()=>showView("quiz");
+}
+function renderMenu(){ renderToday(); }
+
+/* ---------- Phrases: phrasebook by situation + search ---------- */
+function storyPhraseKeys(){ return unlockedItems().keys.filter(k=>W[k].cat==="phrase"); }
+// where each phrase / word appears in the stories
+const INSC=(()=>{ const m={}; const addK=(k,sc)=>{ const key=linkKey(k); if(!key) return; (m[key]=m[key]||[]); if(!m[key].includes(sc)) m[key].push(sc); };
+  for(const [sc,s] of Object.entries(SC)) for(const n of Object.values(s.nodes)){
+    for(const l of n.lines){ const t=Array.isArray(l)?l[1]:l; for(const mm of t.matchAll(TAG)) if(W[mm[1]]) addK(mm[1],sc); }
+    for(const k of Object.keys(n.cards||{})) addK(k,sc); }
+  return m; })();
+const inScenes=key=>{ const l=(INSC[key]||[]).slice(0,3); return l.length?`<span class="insc-l">🎬 ${l.map(sc=>`<button type="button" class="playsc" data-sc="${sc}">${esc(SC[sc].title)}</button>`).join(" · ")}</span>`:""; };
+function rxCardHTML(it,i){
+  const lvl=r=>!r?"new":r.box>=4?"★ solid":r.box>=2?"learning":"just started";
+  if(it.type==="vocab") return `<div class="rxcard"><div class="top"><span class="vemo">${it.emo||"🔤"}</span><b>${esc(it.word)}</b><button class="say-s" type="button" data-say="${esc(it.word)}" aria-label="Listen">🔊</button></div><span class="m">${esc(it.def)}</span><div class="top"><span class="s" style="flex:1">“${exHTML(it)}”</span><button class="say-s" type="button" data-say="${esc(exPlain(it))}" aria-label="Listen to the example">🔊</button></div>${inScenes(it.key)}<span class="lv">#${it.i+1} · ${lvl(RX.items[it.key])}</span></div>`;
+  if(it.type==="chunk") return `<div class="rxcard"><div class="top"><b>${esc(it.text)}</b><button class="say-s" type="button" data-say="${esc(speakT(it.text))}" aria-label="Listen">🔊</button></div><span class="m">${esc(it.mean)}</span><span class="s">When: ${esc(it.sit)}</span>${inScenes(it.key)}<span class="lv">${PACK_ICON[it.pack]||""} ${lvl(RX.items[it.key])}</span></div>`;
+  if(it.type==="pattern"){ const pi=+it.key.slice(2), inSc=((LIFE.PT[pi])||[]).slice(0,2);
+    return `<div class="rxcard"><div class="top"><b>${esc(it.frame)}</b></div><span class="m">${esc(it.use)}</span>${it.ex.map(e=>`<div class="top"><span class="m" style="flex:1">“${esc(e)}”</span><button class="say-s" type="button" data-say="${esc(e)}" aria-label="Listen">🔊</button></div>`).join("")}${inSc.map(([sc,nid,t,who])=>`<div class="top"><span class="s" style="flex:1">🎬 <button type="button" class="playsc" data-sc="${sc}">${esc(SC[sc].title)}</button> · ${esc(cap(label(who)))}: “${esc(t)}”</span><button class="say-s" type="button" data-say="${esc(t)}" data-who="${who}" aria-label="Listen">🔊</button></div>`).join("")}<span class="lv">🧱 ${lvl(RX.items[it.key])}</span></div>`; }
+  const d=W[it.k];
+  return `<div class="rxcard"><div class="top"><b>${esc(label(it.k))}</b><button class="say-s" type="button" data-say="${esc(label(it.k))}" aria-label="Listen">🔊</button></div><span class="m">${d.def}</span>${d.ex?`<span class="s">${d.ex}</span>`:""}<span class="lv">🎬 ${esc(d.tag||"")} · ${lvl(RX.items[it.key])}</span></div>`;
+}
+function wireSay(root){ root.querySelectorAll("[data-say]").forEach(b=>b.onclick=()=>say(b.dataset.say,b.dataset.who||undefined));
+  root.querySelectorAll(".playsc").forEach(b=>b.onclick=()=>{ const sc=b.dataset.sc; level=SC[sc].level; try{localStorage.setItem("sc-level",level);}catch(e){} restart(); showView("story"); playCard(sc); }); }
+function renderRxHome(){
+  const v=$("#rxView"); v.className="view gram"; const t=rxToday();
+  const left=Math.min(40,t.due.length)+t.fresh.length+t.freshW.length;
+  const started=Object.keys(RX.items).filter(k=>k[0]==="c"||k[0]==="p").length;
+  const bandKnown=b=>VOC.slice(b*BAND,(b+1)*BAND).filter(it=>RX.items[it.key]&&RX.items[it.key].box>=2).length;
+  const sp=storyPhraseKeys();
+  const tiles=[...KIT.map(p=>({id:p.id,name:p.name,sub:p.sub,n:p.chunks.length,l:learnedCount(p.id)})),
+    {id:"patterns",name:"Sentence patterns",sub:"Grammar you reuse",n:PATTERNS.length,l:learnedCount("patterns")},
+    ...(sp.length?[{id:"stories",name:"From your stories",sub:"Phrases from your endings",n:sp.length,l:sp.filter(k=>RX.items["w:"+k]&&RX.items["w:"+k].box>=2).length}]:[])];
+  v.innerHTML=`<div class="ghead"><h2>Phrases</h2><span>${started}/${ALLRX.length} started</span></div>
+    <input class="search" id="rxQ" type="search" placeholder="Search: “sorry”, “late”, “restaurant”…" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div id="rxRes" class="gbox" hidden></div>
+    <div id="rxBrowse" style="display:grid;gap:10px">
+      <button class="btn" type="button" id="rxStart">${left?`Today's drill · ${left} ▸`:"Extra round ▸"}</button>
+      <p class="gintro">Every phrase is sorted by situation. Tap a pack to read it, listen, or drill just that topic.</p>
+      <h3 class="sech">🔤 The 3,000 most useful words</h3>
+      <p class="gintro">Ordered by how often people use them. Your daily drill takes new ones from the top. Already know a word? One tap and it's out of the way.</p>
+      <div class="bgrid">${Array.from({length:NBANDS},(_,b)=>{ const n=Math.min(BAND,VOC.length-b*BAND), k=bandKnown(b); return `<button class="btile" type="button" data-b="${b}"><b>${b*BAND+1}–${b*BAND+n}</b><span>${VOC.slice(b*BAND,b*BAND+4).map(x=>x.emo).join("")}</span><span class="bar"><i style="width:${k/n*100}%"></i></span><small>${k}/${n}</small></button>`; }).join("")}</div>
+      <h3 class="sech">💬 Phrases by situation</h3>
+      <div class="pgrid">${tiles.map(p=>`<button class="ptile" type="button" data-p="${p.id}"><span class="e">${PACK_ICON[p.id]||"💬"}</span><b>${esc(p.name)}</b><small>${esc(p.sub)}</small><span class="bar"><i style="width:${p.l/p.n*100}%"></i></span><small class="c">${p.l}/${p.n}</small></button>`).join("")}</div>
+    </div>`;
+  $("#rxStart").onclick=()=>startRx(sessionList(),"rx",{fillW:true});
+  v.querySelectorAll(".ptile").forEach(b=>b.onclick=()=>renderRxPack(b.dataset.p));
+  v.querySelectorAll(".btile").forEach(b=>b.onclick=()=>renderBand(+b.dataset.b));
+  const inp=$("#rxQ"); inp.oninput=()=>rxSearch(inp.value);
+}
+function rxSearch(q){
+  const res=$("#rxRes"), br=$("#rxBrowse"); q=q.trim().toLowerCase();
+  if(q.length<2){ res.hidden=true; br.hidden=false; return; }
+  const hit=s=>String(s||"").toLowerCase().includes(q);
+  const items=[...ALLRX.filter(it=>it.type==="chunk"?hit(it.text)||hit(it.mean)||hit(it.sit):hit(it.frame)||hit(it.use)||it.ex.some(hit)),
+    ...Object.keys(W).filter(k=>W[k].cat==="phrase"&&(hit(W[k].text)||hit(W[k].def))).map(k=>itemOf("w:"+k)),
+    ...VOC.filter(it=>it.word.startsWith(q)||(q.length>=4&&(hit(it.def)||hit(it.ex))))];
+  items.sort((a,b)=>{ const sc=it=>it.type==="vocab"?(it.word===q?-1:it.word.startsWith(q)?0:2):it.type==="chunk"?(hit(it.text)?0:1):it.type==="pattern"?(hit(it.frame)?0:1):(hit(W[it.k].text)?0:1); return sc(a)-sc(b); });
+  br.hidden=true; res.hidden=false;
+  res.innerHTML=items.length?`<small class="k">${items.length} result${items.length>1?"s":""}</small>`+items.slice(0,40).map(rxCardHTML).join(""):`<p style="margin:0">Nothing for “${esc(q)}”. Try a simpler word: “sorry”, “late”, “eat”…</p>`;
+  wireSay(res);
+}
+function renderBand(b){
+  const v=$("#rxView"); v.className="view gram";
+  const items=VOC.slice(b*BAND,(b+1)*BAND);
+  const unk=items.filter(it=>!RX.items[it.key]).length;
+  v.innerHTML=`<div class="gpage"><button class="gback" type="button" id="rxBack">← All phrases</button>
+    <div class="gtitle"><h2>🔤 Words ${b*BAND+1}–${b*BAND+items.length}</h2><p>${unk} not seen yet. Drill them: tap “I know it” for the easy ones, learn the rest.</p></div>
+    <button class="btn" type="button" id="rxDrill">Drill these words ▸</button>
+    <section class="gbox">${items.map(rxCardHTML).join("")}</section></div>`;
+  $("#rxBack").onclick=renderRxHome;
+  $("#rxDrill").onclick=()=>{ const fresh=items.filter(it=>!RX.items[it.key]).slice(0,20); const old=items.filter(it=>RX.items[it.key]).sort((a,c)=>RX.items[a.key].box-RX.items[c.key].box).slice(0,fresh.length?10:20); startRx(shuffle(old).concat(fresh).sort(()=>Math.random()-.5),"rx"); };
+  wireSay(v); v.scrollTop=0;
+}
+function renderRxPack(pid){
+  const v=$("#rxView"); v.className="view gram";
+  const items=pid==="stories"?storyPhraseKeys().map(k=>itemOf("w:"+k)):ALLRX.filter(it=>it.pack===pid);
+  const p=KIT.find(x=>x.id===pid);
+  const title=p?p.name:pid==="stories"?"From your stories":"Sentence patterns";
+  const sub=p?p.sub:pid==="stories"?"Every phrase you met in the endings you found.":"Swap one word and you have a new sentence.";
+  v.innerHTML=`<div class="gpage"><button class="gback" type="button" id="rxBack">← All phrases</button>
+    <div class="gtitle"><h2>${PACK_ICON[pid]||""} ${esc(title)}</h2><p>${esc(sub)}</p></div>
+    <button class="btn" type="button" id="rxDrill">Drill this pack ▸</button>
+    <section class="gbox">${items.map(rxCardHTML).join("")}</section></div>`;
+  $("#rxBack").onclick=renderRxHome;
+  $("#rxDrill").onclick=()=>startRx(shuffle(items.slice()).slice(0,15),"rx");
+  wireSay(v); v.scrollTop=0;
+}
+
+/* ---------- the drill ---------- */
+let R=null;
+function startRx(list,from,opt){
+  R={queue:list.map(it=>({it,intro:(it.type==="chunk"||it.type==="pattern"||it.type==="vocab")&&!RX.items[it.key]})),from:from||"rx",fillW:!!(opt&&opt.fillW),extra:0,known:0,n:0,right:0,total:list.length,missed:[],cur:null};
+  const v=$("#rxView"); if(v.hidden) showView("rx");
+  nextRx();
+}
+const CONTR=[[/\bgonna\b/g,"going to"],[/\bwanna\b/g,"want to"],[/\bgotta\b/g,"got to"],[/\bkinda\b/g,"kind of"],[/\bi'm\b/g,"i am"],[/\b(you|we|they)'re\b/g,"$1 are"],[/\b(it|that|what|there|he|she|who|where|how|here)'s\b/g,"$1 is"],[/\bcan't\b/g,"cannot"],[/\bwon't\b/g,"will not"],[/\b(\w+)n't\b/g,"$1 not"],[/\b(i|you|we|they|he|she|it|that)'ll\b/g,"$1 will"],[/\b(i|you|we|they)'ve\b/g,"$1 have"],[/\b(i|you|we|they|he|she)'d\b/g,"$1 would"],[/\blet's\b/g,"let us"],[/\bcannot\b/g,"can not"],[/\bok\b/g,"okay"],[/\bim\b/g,"i am"],[/\b(do|does|did|is|are|was|were|have|has|should|could|would|wo|ca)nt\b/g,"$1 not"],[/\b(that|it|what|there|hes|shes)s\b/g,"$1 is"],[/\b(you|we|they)re\b/g,"$1 are"],[/\bive\b/g,"i have"],[/\blets\b/g,"let us"],[/\bwo not\b/g,"will not"],[/\bca not\b/g,"can not"]];
+const normT=s=>{ let x=String(s).toLowerCase().replace(/[’‘`]/g,"'").replace(/…/g," ").replace(/[^a-z0-9' ]/g," "); CONTR.forEach(([r,v])=>x=x.replace(r,v)); return x.replace(/'/g,"").replace(/\s+/g," ").trim(); };
+function lev(a,b){ const m=a.length,n=b.length; if(!m) return n; if(!n) return m; let p=Array.from({length:n+1},(_,j)=>j); for(let i=1;i<=m;i++){ const c=[i]; for(let j=1;j<=n;j++) c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1)); p=c; } return p[n]; }
+function checkTyped(input,target){ const a=normT(input), b=normT(target); if(!a) return 0; if(a===b) return 2; return lev(a,b)<=(b.length>=8?Math.max(2,Math.floor(b.length*.15)):1)?1:0; }
+const hintOf=t=>speakT(t).split(" ").map(w=>w.replace(/[a-z]/gi,(c,i)=>i===0?c:"_")).join(" ");
+function rxQuestion(it){
+  const box=(RX.items[it.key]||{box:0}).box;
+  if(it.type==="vocab"){
+    const others=vNear(it,3);
+    if(box>=3 && Math.random()<.45) return {t:"vtype",it,target:it.form};
+    const r=Math.random();
+    if(it.emo && box<2 && r<.3) return {t:"vpic",it,opts:shuffle([it,...others]).map(o=>({k:o.key,txt:o.word})),okK:it.key};
+    if(r<.55){ const fo=[]; for(const o of vNear(it,12)){ if(fo.length===3) break; if(o.form.toLowerCase()!==it.form.toLowerCase()&&!fo.some(x=>x.form===o.form)) fo.push(o); } return {t:"vgap",it,opts:shuffle([it,...fo]).map(o=>({k:o.key,txt:o.form})),okK:it.key}; }
+    if(r<.8) return {t:"vdef",it,opts:shuffle([it,...others]).map(o=>({k:o.key,txt:o.word})),okK:it.key};
+    return {t:"vmean",it,opts:shuffle([it,...others]).map(o=>({k:o.key,txt:o.def})),okK:it.key};
+  }
+  if(it.type==="chunk"){
+    if(box>=3 && Math.random()<.5) return {t:"type",it,target:it.text};
+    const others=shuffle(ALLRX.filter(x=>x.type==="chunk"&&x.pack!==it.pack)).slice(0,3);
+    return {t:Math.random()<.65?"sit":"mean",it,opts:shuffle([it,...others]).map(o=>({k:o.key,txt:o.text})),okK:it.key};
+  }
+  if(it.type==="pattern"){
+    const [sent,ok,w1,w2]=it.fill;
+    if(box>=3 && Math.random()<.4) return {t:"typefill",it,sent,target:ok,okK:ok};
+    if(Math.random()<.5) return {t:"fill",it,sent,opts:shuffle([ok,w1,w2]).map(o=>({k:o,txt:o})),okK:ok};
+    const words=it.build.split(" "); return {t:"build",it,words,order:shuffle(words.map((w,i)=>i)),picked:[]};
+  }
+  if(it.type==="word"){
+    const pool=Object.keys(W).filter(k=>W[k].cat!=="phrase"&&label(k)!==label(it.k));
+    const same=pool.filter(k=>W[k].cat===W[it.k].cat);
+    const opts=[it.k,...shuffle(same.length>=3?same:pool).slice(0,3)];
+    return {t:!NOPIC.has(it.k)&&Math.random()<.6?"pic":"wdef",it,opts:shuffle(opts).map(k=>({k,txt:label(k)})),okK:it.k};
+  }
+  if(it.type==="sphrase"){
+    const pool=Object.keys(W).filter(k=>W[k].cat==="phrase"&&label(k)!==label(it.k));
+    return {t:"def",it,opts:shuffle([it.k,...shuffle(pool).slice(0,3)]).map(k=>({k,txt:label(k)})),okK:it.k};
+  }
+  const [q,o]=it.g.practice[it.i];
+  return {t:"gram",it,qt:q,opts:shuffle(o.slice()).map(x=>({k:x,txt:x})),okK:o[0]};
+}
+function nextRx(){
+  if(!R.queue.length) return endRx();
+  const q=R.queue.shift(); R.n++;
+  if(q.intro){ q.intro=false; R.queue.unshift(q); R.n--; return renderIntro(q.it); }
+  R.cur=rxQuestion(q.it); R.cur.q=q; R.cur.answered=false; renderRxQ();
+}
+function rxTop(){ return `<div class="qtop"><button class="gback" type="button" id="rxQuit" aria-label="Stop">✕</button><div class="qbar"><i style="width:${Math.min(100,(R.n-1)/Math.max(1,R.total)*100)}%"></i></div><b>${Math.min(R.n,R.total)}/${R.total}</b><b>✓ ${R.right}</b></div>`; }
+function wireQuit(){ const b=$("#rxQuit"); if(b) b.onclick=()=>{ R.queue=[]; endRx(); }; }
+function renderIntro(it){
+  const v=$("#rxView"); v.className="view quiz";
+  if(it.type==="vocab"){
+    v.innerHTML=rxTop()+`<div class="qcard"><span class="qkick">New word · #${it.i+1}</span>
+      <div class="vbig">${it.emo||"🔤"}</div><div class="intro-chunk">${esc(it.word)}</div><div class="intro-m">${esc(it.def)}</div>
+      <div class="intro-s" style="font-style:normal">“${exHTML(it)}”</div>
+      <div style="display:flex;gap:10px;margin-top:6px"><button class="qlisten" type="button" id="rxSay" style="width:54px;height:54px;font-size:22px" aria-label="Listen to the word">🔊</button><button class="qlisten" type="button" id="rxSayEx" style="width:54px;height:54px;font-size:15px" aria-label="Listen to the example">🔊 ex.</button></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn ghost" type="button" id="rxKnow">I know it ✓</button><button class="btn" type="button" id="rxGot">Learn it ▸</button></div>`;
+    $("#rxSay").onclick=()=>say(it.word); $("#rxSayEx").onclick=()=>say(exPlain(it)); $("#rxGot").onclick=nextRx; wireQuit(); say(it.word);
+    $("#rxKnow").onclick=()=>{
+      const d=today(); RX.items[it.key]={box:4,due:d+INTERVALS[4]}; rxSave(); R.known++;
+      R.queue.shift(); R.total--;
+      if(R.fillW && R.extra<60){ const nx=VOC.find(x=>!RX.items[x.key]&&!R.queue.some(q=>q.it===x)); if(nx){ R.queue.splice(Math.min(2,R.queue.length),0,{it:nx,intro:true}); R.total++; R.extra++; } }
+      nextRx();
+    };
+    return;
+  }
+  v.innerHTML=rxTop()+`<div class="qcard"><span class="qkick">New ${it.type==="chunk"?"phrase · "+PACK_ICON[it.pack]+" "+esc(KIT.find(p=>p.id===it.pack).name):"pattern"}</span>
+    ${it.type==="chunk"?`<div class="intro-chunk">${esc(it.text)}</div><div class="intro-m">${esc(it.mean)}</div><div class="intro-s">Use it when: ${esc(it.sit)}</div>`
+      :`<div class="intro-chunk" style="font-size:28px">${esc(it.frame)}</div><div class="intro-m">${esc(it.use)}</div>${it.ex.map(e=>`<div class="intro-s" style="font-style:normal">“${esc(e)}”</div>`).join("")}`}
+    <button class="qlisten" type="button" id="rxSay" style="width:60px;height:60px;font-size:24px;margin-top:6px" aria-label="Listen">🔊</button></div>
+    <button class="btn" type="button" id="rxGot">Got it ▸</button>`;
+  const txt=it.type==="chunk"?speakT(it.text):it.ex[0];
+  $("#rxSay").onclick=()=>say(txt); $("#rxGot").onclick=nextRx; wireQuit(); say(txt);
+}
+const KICK={vpic:"Which word is this?",vdef:"Which word?",vgap:"Complete the sentence",vtype:"Type the missing word",vmean:"What does it mean?",sit:"Quick! What do you say?",mean:"Which one means…",type:"Your turn: type it",typefill:"Type the missing word(s)",fill:"Complete",build:"Build the sentence",pic:"What's this?",wdef:"Which word?",def:"Which phrase means…",gram:"Grammar"};
+function renderRxQ(){
+  const q=R.cur, it=q.it, v=$("#rxView"); v.className="view quiz";
+  let body="";
+  if(q.t==="sit") body=`<div class="qsit"><small>Situation</small>${esc(it.sit)}</div>${RX.timer?`<div class="timer"><i style="animation-duration:${RX.timer}s"></i></div>`:""}`;
+  if(q.t==="mean") body=`<div class="qdef">“${esc(it.mean)}”</div>`;
+  if(q.t==="type") body=`<div class="qsit"><small>Situation</small>${esc(it.sit)}</div><small class="tmean">Meaning: ${esc(it.mean)}</small>`;
+  if(q.t==="fill"||q.t==="typefill") body=`<small class="tmean" style="margin-top:14px">${esc(it.frame)}</small><div class="qdef" style="margin-top:2px">${esc(q.sent).replace("___",'<span class="gap">&nbsp;?&nbsp;</span>')}</div>`;
+  if(q.t==="build") body=`<small class="tmean" style="margin-top:14px">${esc(it.frame)}</small><div class="build-ans" id="bAns"></div><div class="tiles" id="bTiles" style="margin-top:12px">${q.order.map(i=>`<button class="tile-w" type="button" data-i="${i}">${esc(q.words[i])}</button>`).join("")}</div>`;
+  if(q.t==="pic") body=`<div class="qart">${pic(it.k)}</div>`;
+  if(q.t==="wdef"||q.t==="def") body=`<div class="qdef">“${W[it.k].def}”</div>`;
+  if(q.t==="vpic") body=`<div class="vbig" style="font-size:84px;margin-top:10px">${it.emo}</div>`;
+  if(q.t==="vdef") body=`<div class="qdef">“${esc(it.def)}”</div>`;
+  if(q.t==="vgap") body=`<div class="qdef">${exGap(it)}</div>`;
+  if(q.t==="vtype") body=`<div class="qdef">${exGap(it)}</div><small class="tmean">Hint: ${esc(it.def)}</small>`;
+  if(q.t==="vmean") body=`<div class="vbig" style="font-size:44px;margin-top:12px">${it.emo||""}</div><div class="intro-chunk" style="margin-top:0">${esc(it.word)}</div>`;
+  if(q.t==="gram") body=`<small class="tmean" style="margin-top:14px">${esc(it.g.title)}</small><div class="qdef" style="margin-top:2px">${gMark(q.qt).replace("___",'<span class="gap">&nbsp;?&nbsp;</span>')}</div>`;
+  const typing=q.t==="type"||q.t==="typefill"||q.t==="vtype";
+  let below="";
+  if(q.opts) below=`<div class="qopts${q.t==="vmean"?" long":""}"${q.opts.length===3?' style="grid-template-columns:1fr 1fr 1fr"':""}>${q.opts.map(o=>`<button class="qopt" type="button" data-k="${esc(o.k)}">${esc(o.txt)}</button>`).join("")}</div>`;
+  else if(q.t==="build") below=`<div style="display:flex;gap:8px;justify-content:center"><button class="btn ghost" type="button" id="bUndo">↩ Undo</button><button class="btn" type="button" id="bCheck" disabled>Check</button></div>`;
+  else if(typing) below=`<form class="typebox" id="tForm" autocomplete="off"><input id="tIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="${q.t==="type"?"Type what you'd say…":q.t==="vtype"?"Type the word…":"Missing word(s)…"}"><p class="thint" id="tHint" hidden></p>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn ghost" type="button" id="tHelp">💡 Hint</button><button class="btn ghost" type="button" id="tSkip">I don't know</button><button class="btn" type="submit">Check</button></div></form>`;
+  v.innerHTML=rxTop()+`<div class="qcard"><span class="qkick">${KICK[q.t]}</span>${body}</div>${below}<div id="qfb"></div>`;
+  wireQuit(); q.t0=Date.now();
+  if(q.t==="build"){
+    const tiles=v.querySelectorAll("#bTiles .tile-w");
+    const draw=()=>{ $("#bAns").innerHTML=q.picked.map(i=>`<span class="tile-w">${esc(q.words[i])}</span>`).join(""); tiles.forEach(t=>t.classList.toggle("used",q.picked.includes(+t.dataset.i))); $("#bCheck").disabled=q.picked.length!==q.words.length; };
+    tiles.forEach(t=>t.onclick=()=>{ if(q.answered) return; const i=+t.dataset.i; if(!q.picked.includes(i)){ q.picked.push(i); draw(); } });
+    $("#bUndo").onclick=()=>{ if(q.answered) return; q.picked.pop(); draw(); };
+    $("#bCheck").onclick=()=>{ const norm=s=>s.toLowerCase().replace(/[^a-z' ]/g,""); rxAnswer(norm(q.picked.map(i=>q.words[i]).join(" "))===norm(it.build)); };
+  } else if(typing){
+    const inp=$("#tIn"); try{ inp.focus({preventScroll:true}); }catch(e){}
+    $("#tHelp").onclick=()=>{ q.hinted=true; const h=$("#tHint"); h.hidden=false; h.textContent=hintOf(q.target); inp.focus(); };
+    $("#tSkip").onclick=()=>rxAnswer(false,{typed:""});
+    $("#tForm").onsubmit=e=>{ e.preventDefault(); if(q.answered) return; const r=checkTyped(inp.value,q.target); if(!inp.value.trim()) return; rxAnswer(r>0,{close:r===1,soft:q.hinted,typed:inp.value}); };
+  } else {
+    v.querySelectorAll(".qopt").forEach(b=>b.onclick=()=>{
+      if(q.answered) return;
+      const ok=b.dataset.k===q.okK;
+      v.querySelectorAll(".qopt").forEach(x=>{ x.disabled=true; if(x.dataset.k===q.okK) x.classList.add("ok"); else if(x===b) x.classList.add("bad"); else x.classList.add("dim"); });
+      rxAnswer(ok);
+    });
+  }
+}
+function rxSpoken(q){
+  const it=q.it;
+  if(it.type==="vocab") return q.t==="vgap"||q.t==="vtype"?exPlain(it):it.word;
+  if(it.type==="chunk") return speakT(it.text);
+  if(it.type==="pattern") return q.t==="build"?it.build+".":q.sent.replace("___",q.okK);
+  if(it.type==="word"||it.type==="sphrase") return label(it.k);
+  return q.qt.includes("___")?q.qt.replace("___",q.okK).replace(/[“”]/g,""):null;
+}
+function rxAnswer(ok,o){
+  o=o||{}; const q=R.cur, it=q.it; if(q.answered) return; q.answered=true;
+  const slow = q.t==="sit" && RX.timer && Date.now()-q.t0>RX.timer*1000;
+  rxGrade(it.key,ok,slow||o.soft);
+  if(ok) R.right++;
+  else { R.missed.push(it); if(!q.q.retried){ q.q.retried=true; R.queue.splice(Math.min(3,R.queue.length),0,q.q); R.total++; } }
+  if(q.t==="build"){ const a=$("#bAns"); a.classList.add(ok?"ok":"bad"); if(!ok) a.insertAdjacentHTML("afterend",`<p class="fixed">${esc(it.build)}.</p>`); $("#bCheck").disabled=true; }
+  if(q.t==="type"||q.t==="typefill"||q.t==="vtype"){ const inp=$("#tIn"); inp.disabled=true; inp.classList.add(ok?"ok":"bad"); $("#tForm").querySelectorAll("button").forEach(b=>b.disabled=true); }
+  const spoken=rxSpoken(q); if(spoken) say(spoken);
+  const fb=$("#qfb"); fb.className="qfb";
+  const head=ok?(slow?"Right, but too slow! Faster next time ⏱":o.close?"Almost perfect! Check the spelling.":o.soft?"Right, with a hint 💡":GOOD[Math.floor(Math.random()*GOOD.length)]):BAD[Math.floor(Math.random()*BAD.length)];
+  let info="";
+  if(it.type==="vocab") info=`<p>${it.emo||""} <b>${esc(it.word)}</b>: ${esc(it.def)}</p><p style="opacity:.85">“${exHTML(it)}”</p>`;
+  else if(it.type==="chunk") info=`<p><b>${esc(it.text)}</b>: ${esc(it.mean)}</p>`;
+  else if(it.type==="pattern") info=`${q.t==="typefill"||q.t==="fill"?`<p><b>${esc(q.sent.replace("___",q.okK))}</b></p>`:""}<p><b>${esc(it.frame)}</b>: ${esc(it.use)}</p><p style="opacity:.8">“${esc(it.ex[0])}”</p>`;
+  else if(it.type==="gram") info=`<p><b>${esc(q.qt.replace("___",q.okK).replace(/\*/g,""))}</b></p><p style="opacity:.8">From the lesson: ${esc(it.g.title)}</p>`;
+  else { const d=W[it.k]; info=`<p><b>${esc(label(it.k))}</b>: ${d.def}</p>${d.ex?`<p style="opacity:.75;font-style:italic">${d.ex}</p>`:""}`; }
+  if((q.t==="type"||q.t==="typefill"||q.t==="vtype") && !ok && o.typed) info=`<p style="opacity:.8">You wrote: <s>${esc(o.typed)}</s></p>`+info;
+  fb.innerHTML=`<span class="v ${ok&&!slow&&!o.soft?"good":"bad"}">${head}</span>${info}<div class="row">${spoken?'<button class="btn ghost" type="button" id="rxS">🔊</button>':""}${it.type==="gram"?'<button class="btn ghost" type="button" id="rxL">Lesson</button>':""}<button class="btn" type="button" id="rxN">${R.queue.length?"Next ▸":"Finish"}</button></div>`;
+  const sb=$("#rxS"); if(sb) sb.onclick=()=>say(spoken);
+  const lb=$("#rxL"); if(lb) lb.onclick=()=>{ showView("grammar"); renderLesson(it.g); };
+  $("#rxN").onclick=nextRx; try{ $("#rxN").focus({preventScroll:true}); }catch(e){}
+  try{ fb.scrollIntoView({behavior:"smooth",block:"nearest"}); }catch(e){}
+}
+const itName=it=>it.type==="vocab"?(it.emo||"")+" "+it.word:it.type==="chunk"?it.text:it.type==="pattern"?it.frame:it.type==="gram"?it.g.practice[it.i][0].replace(/\*/g,""):label(it.k);
+const itMean=it=>it.type==="vocab"?esc(it.def):it.type==="chunk"?it.mean:it.type==="pattern"?it.use:it.type==="gram"?"Grammar: "+it.g.title:W[it.k].def;
+function endRx(){
+  rxSave(); updateChips();
+  const missed=[...new Set(R.missed)]; const t=rxToday(); const more=Math.min(30,t.due.length)+t.fresh.length;
+  const v=$("#rxView"); v.className="view gram"; const tot=Math.max(1,R.total);
+  v.innerHTML=`<div class="qend"><div class="stars">🔥 ${liveStreak()} day${liveStreak()>1?"s":""}</div><div class="big">${R.right}/${R.total}</div><h2>${R.right===R.total&&R.total?"Nailed it!":R.right/tot>=.7?"Nice work!":"Keep going!"}</h2>
+    ${missed.length?`<p style="margin:0;font-size:13px;color:#6b5440">These come back soon:</p><ul>${missed.map(it=>`<li><b>${esc(itName(it))}</b><br>${itMean(it)}</li>`).join("")}</ul>`:""}
+    <p style="margin:0;font-size:13px;color:#6b5440">${more?`Still today: ${more} to go.`:"That's it for today. See you tomorrow!"}</p>
+    <div class="row"><button class="btn" type="button" id="rxMore">${more?"Keep going ▸":"Extra round"}</button><button class="btn ghost" type="button" id="rxHome">Done</button></div></div>`;
+  $("#rxMore").onclick=()=>startRx(sessionList(),R.from,{fillW:true});
+  $("#rxHome").onclick=()=>showView(R.from==="story"?"story":R.from==="menu"?"menu":"rx");
+}
+
+/* ---------- settings + first-time intro ---------- */
+function sheet(html){ const h=$("#sheetHost"); h.innerHTML=`<div class="sheet-bg"><div class="sheet" role="dialog">${html}</div></div>`; h.querySelector(".sheet-bg").onclick=e=>{ if(e.target.classList.contains("sheet-bg")) h.innerHTML=""; }; return h; }
+function openSettings(){
+  const seg=(id,vals,cur,lab)=>`<div class="seg" id="${id}">${vals.map((x,i)=>`<button type="button" data-v="${x}" aria-pressed="${x===cur}">${lab?lab[i]:x}</button>`).join("")}</div>`;
+  const h=sheet(`<h2>Settings</h2>
+    <div class="srow"><span>Voice</span><button type="button" class="btn ghost" id="sVoice">${voiceOn?"🔊 On":"🔇 Off"}</button></div>
+    <div class="srow col"><span>New phrases per day</span>${seg("sPer",[10,15,25,40],RX.perDay||15)}<small>15 = the whole kit in about a month. 25+ = try-hard mode.</small></div>
+    <div class="srow col"><span>New words per day (3000 list)</span>${seg("sPerW",[0,10,20,30,50],RX.wPerDay??20)}<small>Words you already know don't count: tap “I know it” and the next one comes in.</small></div>
+    <div class="srow col"><span>Timer on “Quick!” questions</span>${seg("sTim",[0,15,10,6],RX.timer,["Off","Relaxed","Normal","Fast"])}<small>Answer before the bar runs out to build real reflexes.</small></div>
+    <div class="srow"><span>How it works</span><button type="button" class="btn ghost" id="sIntro">Show intro</button></div>
+    <div class="srow"><span>Progress</span><button type="button" class="btn ghost" id="sReset">Reset all</button></div>
+    <p class="credit">Voices: Kokoro-82M neural TTS (Apache 2.0) · 🇺🇸 American &amp; 🇬🇧 British accents. All stories, art and phrases are original.</p>
+    <button type="button" class="btn" id="sClose">Done</button>`);
+  $("#sVoice").onclick=()=>{ $("#voice").click(); $("#sVoice").textContent=voiceOn?"🔊 On":"🔇 Off"; };
+  h.querySelectorAll("#sPer button").forEach(b=>b.onclick=()=>{ RX.perDay=+b.dataset.v; rxSave(); h.querySelectorAll("#sPer button").forEach(x=>x.setAttribute("aria-pressed",x===b)); });
+  h.querySelectorAll("#sPerW button").forEach(b=>b.onclick=()=>{ RX.wPerDay=+b.dataset.v; rxSave(); h.querySelectorAll("#sPerW button").forEach(x=>x.setAttribute("aria-pressed",x===b)); });
+  h.querySelectorAll("#sTim button").forEach(b=>b.onclick=()=>{ RX.timer=+b.dataset.v; rxSave(); h.querySelectorAll("#sTim button").forEach(x=>x.setAttribute("aria-pressed",x===b)); });
+  $("#sIntro").onclick=()=>showIntro(0);
+  let armed=false; $("#sReset").onclick=()=>{ if(!armed){ armed=true; $("#sReset").textContent="Tap again to erase"; return; }
+    RX=RX_DEFAULT(); found={}; gDone={}; gSeen={}; weak={}; rxSave(); saveFound(); gSave(); saveWeak(); restart(); h.innerHTML=""; showView(view==="quiz"?"menu":view); };
+  $("#sClose").onclick=()=>{ h.innerHTML=""; if(view==="menu") renderToday(); if(view==="rx"&&!$("#rxView").querySelector(".qcard")) renderRxHome(); };
+}
+const INTRO=[
+  ["🏠","Today","One short drill a day (about 10 minutes): the phrases people really say, in real situations. What you miss comes back until it's automatic."],
+  ["🎬","Stories","Play cards to build a scene and hear the phrases in action, with 🇺🇸 and 🇬🇧 voices. Every ending adds its words to your reviews."],
+  ["💬","Phrases & Grammar","Look up any phrase by situation, and learn the grammar people actually use. No translation: everything is explained in simple English."]];
+function showIntro(i){
+  const [e,t,p]=INTRO[i];
+  const h=sheet(`<div class="intro"><div class="ie">${e}</div><h2>${t}</h2><p>${p}</p><div class="dots">${INTRO.map((_,k)=>`<i class="${k===i?"on":""}"></i>`).join("")}</div>
+    <button type="button" class="btn" id="iNext">${i<INTRO.length-1?"Next ▸":"Let's go! ▸"}</button></div>`);
+  $("#iNext").onclick=()=>{ if(i<INTRO.length-1) showIntro(i+1); else { h.innerHTML=""; try{localStorage.setItem("sc-intro","1");}catch(e){} } };
+}
+$("#gear").onclick=openSettings;
+
+let gDone={}, gSeen={};
+try{ gDone=JSON.parse(localStorage.getItem("sc-gdone")||"{}")||{}; gSeen=JSON.parse(localStorage.getItem("sc-gseen")||"{}")||{}; }catch(e){}
+const gSave=()=>{ try{ localStorage.setItem("sc-gdone",JSON.stringify(gDone)); localStorage.setItem("sc-gseen",JSON.stringify(gSeen)); }catch(e){} };
+const gUnlocked=g=>true;
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const gMark=t=>esc(t).replace(/\*([^*]+)\*/g,"<mark>$1</mark>").replace(/✗/g,'<span class="bad-t">✗</span>').replace(/✓/g,'<span class="ok-t">✓</span>');
+function renderGrammarList(){
+  const v=$("#grammarView"); const next=GRAMMAR.find(g=>!gDone[g.id]);
+  v.innerHTML=`<div class="ghead"><h2>Grammar</h2><span>${Object.keys(gDone).length}/${GRAMMAR.length} done</span></div>
+    <p class="gintro">The grammar you need to talk, in a useful order. Each lesson: the rule, how people really say it, examples, a trap, then a quick practice. Practice questions come back in your daily drill.</p>
+    <ul class="glist">${GRAMMAR.map((g,i)=>{
+      const st=gDone[g.id]?'<span class="st done">✓ done</span>':g===next?'<span class="st new">next</span>':"";
+      return `<li><button class="gitem" type="button" data-g="${g.id}"><span class="n">${i+1}</span><span class="t"><b>${esc(g.title)}</b><small>${esc(g.sub)}</small></span>${st}</button></li>`;
+    }).join("")}</ul>`;
+  v.querySelectorAll(".gitem").forEach(b=>b.onclick=()=>renderLesson(GRAMMAR.find(x=>x.id===b.dataset.g)));
+  v.scrollTop=0;
+}
+function renderLesson(g){
+  gSeen[g.id]=1; gSave();
+  const v=$("#grammarView");
+  const gx=(LIFE.GX[g.id]||[]).filter(x=>SC[x[0]]);
+  const pick=[]; const per={}; for(const x of gx){ if((per[x[0]]||0)<1){ per[x[0]]=1; pick.push(x); } if(pick.length>=6) break; }
+  const exs=pick.length?pick.map(([sc,t,who])=>[sc,plain(t),who]):g.ex, hidden=0;
+  v.innerHTML=`<div class="gpage">
+    <button class="gback" type="button" id="gBack">← All lessons</button>
+    <div class="gtitle"><h2>${esc(g.title)}</h2><p>${esc(g.sub)}</p></div>
+    <section class="gbox" style="--k:var(--c-phrase)"><h3>The rule</h3>${g.rule.map(([l,f,e])=>`<div class="grow"><span class="l">${esc(l)}</span>${f?`<span class="f">${esc(f)}</span>`:""}<span class="e">${gMark(e)}</span></div>`).join("")}</section>
+    <section class="gbox" style="--k:var(--gold)"><h3>Real talk</h3><ul>${g.talk.map(t=>`<li>${gMark(t)}</li>`).join("")}</ul></section>
+    <section class="gbox" style="--k:var(--c-place)"><h3>In real scenes</h3>${exs.map(([sc,t],i)=>`<div class="gex"><button class="say" type="button" data-say="${i}" aria-label="Listen">🔊</button><span><small><button type="button" class="playsc" data-sc="${sc}">🎬 ${esc(SC[sc]?SC[sc].title:"")} ▸</button></small>${exs[i][2]?`<b class="exwho">${esc(cap(label(exs[i][2])))}:</b> `:""}${gMark(t)}</span></div>`).join("")||'<p style="margin:0;font-size:14px">Find more endings to see examples here.</p>'}${hidden?`<p style="margin:0;font-size:12.5px;color:#8a7458">🔒 ${hidden} more example${hidden>1?"s":""} in stories you haven't finished yet.</p>`:""}</section>
+    <section class="gbox" style="--k:var(--c-character)"><h3>Watch out</h3><ul>${g.trap.map(t=>`<li>${gMark(t)}</li>`).join("")}</ul></section>
+    <section class="gbox" style="--k:var(--c-action)"><h3>Practice</h3><div id="gPractice"></div></section>
+  </div>`;
+  $("#gBack").onclick=renderGrammarList;
+  v.querySelectorAll("[data-say]").forEach(b=>b.onclick=()=>{ const e=exs[+b.dataset.say]; say(e[1].replace(/\*/g,"").replace(/\(.*?\)/g,"").trim(),e[2]&&VOICES.cast[e[2]]?e[2]:undefined); });
+  v.querySelectorAll(".playsc").forEach(b=>b.onclick=()=>{ const sc=b.dataset.sc; level=SC[sc].level; try{localStorage.setItem("sc-level",level);}catch(e){} restart(); showView("story"); playCard(sc); });
+  renderPractice(g);
+  v.scrollTop=0;
+}
+function renderPractice(g){
+  const box=$("#gPractice"); let answered=0, right=0;
+  box.innerHTML=g.practice.map(([q,opts],i)=>`<div class="gq" data-i="${i}"><p>${gMark(q)}</p><div class="opts">${shuffle(opts.map((o,k)=>({o,k}))).map(x=>`<button type="button" data-k="${x.k}">${esc(x.o)}</button>`).join("")}</div></div>`).join("")+`<div class="gscore" id="gScore"></div>`;
+  box.querySelectorAll(".gq").forEach(qd=>{
+    const [q,opts]=g.practice[+qd.dataset.i];
+    qd.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+      const ok=b.dataset.k==="0";
+      qd.querySelectorAll("button").forEach(x=>{ x.disabled=true; if(x.dataset.k==="0") x.classList.add("ok"); });
+      if(!ok) b.classList.add("bad");
+      answered++; if(ok) right++;
+      rxGrade("g:"+g.id+":"+qd.dataset.i, ok);
+      if(ok && q.includes("___")) say(q.replace("___",opts[0]).replace(/[“”]/g,""));
+      if(answered===g.practice.length){
+        const all=right===g.practice.length;
+        if(all){ gDone[g.id]=1; gSave(); }
+        $("#gScore").innerHTML=`${right}/${g.practice.length} · ${all?"Nailed it! ✓ Lesson done":"Almost! <button class=\"btn ghost\" type=\"button\" id=\"gRetry\" style=\"font-size:16px;padding:4px 12px\">Try again</button>"}`;
+        const r=$("#gRetry"); if(r) r.onclick=()=>renderPractice(g);
+        const nx=GRAMMAR[GRAMMAR.indexOf(g)+1];
+        if(all&&nx){ const b=mkBtn("Next lesson ▸","btn",()=>renderLesson(nx)); b.style.cssText="font-size:16px;padding:4px 12px;margin-left:6px"; $("#gScore").append(b); }
+      }
+    });
+  });
+}
+
+/* ---------- quiz: built from the endings you found ---------- */
+function ancestorsOf(sc,endId){
+  const nodes=SC[sc].nodes, parents={};
+  for(const [id,n] of Object.entries(nodes)) if(n.cards) for(const nx of Object.values(n.cards)) (parents[nx]=parents[nx]||[]).push(id);
+  const seen=new Set([endId]), st=[endId];
+  while(st.length){ const x=st.pop(); for(const p of parents[x]||[]) if(!seen.has(p)){ seen.add(p); st.push(p); } }
+  return seen;
+}
+function unlockedItems(){
+  const keys=new Set(), lines=[];
+  for(const sc of Object.keys(found)){
+    if(!SC[sc]) continue;
+    for(const e of found[sc]){
+      if(!SC[sc].nodes[e]) continue;
+      keys.add(sc);
+      for(const id of ancestorsOf(sc,e)){
+        const n=SC[sc].nodes[id];
+        n.lines.forEach((l,i)=>{ const t=Array.isArray(l)?l[1]:l; for(const m of t.matchAll(TAG)) keys.add(m[1]);
+          if(Array.isArray(l)){ const pl=i>0?n.lines[i-1]:null; lines.push({sc,who:l[0],s:t,prev:pl?(Array.isArray(pl)?{who:pl[0],s:pl[1]}:{s:pl}):null}); } });
+        if(n.cards) Object.keys(n.cards).forEach(k=>keys.add(k));
+      }
+    }
+  }
+  const seenL=new Set();
+  return {keys:[...keys].filter(k=>W[k]), lines:lines.filter(l=>{const k=l.who+l.s; if(seenL.has(k)) return false; seenL.add(k); return true;})};
+}
+let weak={}; try{ weak=JSON.parse(localStorage.getItem("sc-weak")||"{}")||{}; }catch(e){}
+const saveWeak=()=>{ try{localStorage.setItem("sc-weak",JSON.stringify(weak));}catch(e){} };
+const shuffle=a=>{ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const pickW=(arr)=>{ // missed items come back more often
+  const ws=arr.map(k=>1+3*(weak[k]||0)); let r=Math.random()*ws.reduce((a,b)=>a+b,0);
+  for(let i=0;i<arr.length;i++){ r-=ws[i]; if(r<=0) return arr[i]; } return arr[arr.length-1]; };
+function distractors(k,n,pool){
+  const d=W[k], same=pool.filter(x=>x!==k&&W[x].cat===d.cat&&label(x)!==label(k));
+  const out=shuffle(same.filter(x=>d.cat!=="phrase"||W[x].tag!==d.tag)).slice(0,n);
+  if(out.length<n) out.push(...shuffle(same.filter(x=>!out.includes(x))).slice(0,n-out.length));
+  return out;
+}
+const NOPIC=new Set(["you","friend","stranger","guest","manager","receptionist","boss","mom","roommate","neighbor","partner","dad","coworker","date"]);
+function makeQuestion(u,used){
+  const pool=u.keys, allPhr=Object.keys(W).filter(k=>W[k].cat==="phrase"), allWords=Object.keys(W).filter(k=>W[k].cat!=="phrase");
+  const phr=pool.filter(k=>W[k].cat==="phrase"), words=pool.filter(k=>W[k].cat!=="phrase"&&W[k].cat!=="place");
+  const gapLines=u.lines.filter(l=>/\[p_[^\]]+\]/.test(l.s));
+  const types=[];
+  if(words.length) types.push("pic","pic");
+  if(phr.length) types.push("def","def");
+  if(gapLines.length) types.push("gap","gap");
+  if(voiceOn && ttsWorks!==false && "speechSynthesis" in window && (phr.length||words.length)) types.push("listen");
+  if(words.length) types.push("wdef");
+  for(let tries=0;tries<20;tries++){
+    const t=types[Math.floor(Math.random()*types.length)];
+    if(t==="pic"){ const pw=words.filter(x=>!NOPIC.has(x)); if(!pw.length) continue; const k=pickW(pw); if(used.has(k)&&tries<15) continue;
+      return {t,k,kick:"What's this?",opts:shuffle([k,...distractors(k,3,allWords.filter(x=>W[x].cat!=="place"&&!NOPIC.has(x)))])}; }
+    if(t==="wdef"){ const k=pickW(words); if(used.has(k)&&tries<15) continue;
+      return {t,k,kick:"Which word is it?",opts:shuffle([k,...distractors(k,3,allWords.filter(x=>W[x].cat!=="place"))])}; }
+    if(t==="def"){ const k=pickW(phr); if(used.has(k)&&tries<15) continue;
+      return {t,k,kick:"Which one means…",opts:shuffle([k,...distractors(k,3,allPhr)])}; }
+    if(t==="listen"){ const k=pickW(phr.length?phr:words); if(used.has(k)&&tries<15) continue;
+      return {t,k,kick:"Listen. What did you hear?",opts:shuffle([k,...distractors(k,3,W[k].cat==="phrase"?allPhr:allWords)])}; }
+    if(t==="gap"){ const withCtx=gapLines.filter(x=>x.prev); const src=(withCtx.length&&Math.random()<.75)?withCtx:gapLines; const l=src[Math.floor(Math.random()*src.length)];
+      const ks=[...l.s.matchAll(/\[(p_[^\]|]+)/g)].map(m=>m[1]); const k=ks[Math.floor(Math.random()*ks.length)];
+      if(used.has(k)&&tries<15) continue;
+      return {t,k,line:l,kick:"Fill the gap",opts:shuffle([k,...distractors(k,3,allPhr)])}; }
+  }
+  return null;
+}
+let Q=null;
+function startQuiz(){
+  const u=unlockedItems(); const n=Math.min(10,Math.max(5,u.keys.length));
+  Q={u,n,i:0,score:0,missed:[],used:new Set(),cur:null,answered:false};
+  nextQuestion();
+}
+function nextQuestion(){
+  if(Q.i>=Q.n){ return renderQuizEnd(); }
+  Q.cur=makeQuestion(Q.u,Q.used); Q.answered=false;
+  if(!Q.cur){ Q.n=Q.i; return renderQuizEnd(); }
+  Q.used.add(Q.cur.k); Q.i++;
+  renderQuiz();
+  if(Q.cur.t==="listen"){ Q.cur.uk=Math.random()<.5; setTimeout(()=>say(label(Q.cur.k),null,{uk:Q.cur.uk}),350); }
+}
+function promptHTML(q){
+  const d=W[q.k];
+  if(q.t==="pic") return `<div class="qart">${art(q.k)}</div>`;
+  if(q.t==="wdef") return `<div class="qdef">${d.def}</div>`;
+  if(q.t==="def") return `<div class="qdef">“${d.def}”</div>`;
+  if(q.t==="listen") return `<button class="qlisten" type="button" id="qPlay" aria-label="Play again">🔊</button>`;
+  if(q.t==="gap"){
+    let txt=q.line.s.replace(TAG,(m,w,t)=> w===q.k ? "§GAP§" : (t||label(w)));
+    txt=txt.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])).replace("§GAP§",'<span class="gap">&nbsp;?&nbsp;</span>');
+    const pv=q.line.prev;
+    const prevHTML=pv?`<p class="qprev">${pv.who?`<b>${cap(label(pv.who))}:</b> “${plain(pv.s)}”`:plain(pv.s)}</p>`:"";
+    return `<p class="qprev" style="margin-top:14px;font-style:normal;font-size:11px;letter-spacing:.1em;text-transform:uppercase">${SC[q.line.sc].title}</p>${prevHTML.replace('class="qprev"','class="qprev" style="margin-top:2px"')}<div class="qscene">${art(q.line.who,{mood:"neutral"})}<div class="balloon">${txt}</div></div><small style="color:#8a7458">What does ${label(q.line.who)==="you"?"you say":"the "+label(q.line.who)+" say"}?</small>`;
+  }
+}
+function renderQuiz(){
+  const q=Q.cur, v=$("#quizView"); v.className="view quiz";
+  v.innerHTML=`<div class="qtop"><div class="qbar"><i style="width:${((Q.i-1)/Q.n)*100}%"></i></div><b>${Q.i}/${Q.n}</b><b>★ ${Q.score}</b></div>
+    <div class="qcard"><span class="qkick">${q.kick}</span>${promptHTML(q)}</div>
+    <div class="qopts">${q.opts.map(o=>`<button class="qopt" type="button" data-k="${o}">${label(o)}</button>`).join("")}</div>
+    <div id="qfb"></div>`;
+  v.querySelectorAll(".qopt").forEach(b=>b.onclick=()=>answer(b.dataset.k));
+  const pb=v.querySelector("#qPlay"); if(pb) pb.onclick=()=>say(label(q.k),null,{uk:q.uk});
+}
+const GOOD=["Nailed it!","Yep!","You got it!","Boom!","Exactly!"], BAD=["Nope!","Not quite.","Close, but no.","Oops."];
+function answer(k){
+  if(Q.answered) return; Q.answered=true;
+  const q=Q.cur, right=k===q.k, d=W[q.k];
+  $("#quizView").querySelectorAll(".qopt").forEach(b=>{ b.disabled=true; if(b.dataset.k===q.k) b.classList.add("ok"); else if(b.dataset.k===k) b.classList.add("bad"); else b.classList.add("dim"); });
+  if(right){ Q.score++; weak[q.k]=Math.max(0,(weak[q.k]||0)-1); } else { weak[q.k]=(weak[q.k]||0)+1; Q.missed.push(q.k); }
+  saveWeak();
+  say(label(q.k),null,{uk:q.uk});
+  const fb=$("#qfb"); fb.className="qfb";
+  fb.innerHTML=`<span class="v ${right?"good":"bad"}">${right?GOOD[Math.floor(Math.random()*GOOD.length)]:BAD[Math.floor(Math.random()*BAD.length)]}</span>
+    <p><b>${d.cat==="phrase"?"“"+label(q.k)+"”":label(q.k)}</b>: ${d.def}</p>${q.t==="listen"?`<p style="opacity:.75">You heard a ${q.uk?"🇬🇧 British":"🇺🇸 American"} voice.</p>`:""}${d.ex?`<p style="opacity:.75;font-style:italic">${d.cat==="phrase"?d.ex:"“"+d.ex+"”"}</p>`:""}
+    <div class="row"><button class="btn ghost" type="button" id="qSay">🔊</button><button class="btn" type="button" id="qNext">${Q.i>=Q.n?"See score":"Next ▸"}</button></div>`;
+  $("#qSay").onclick=()=>say(label(q.k)); $("#qNext").onclick=nextQuestion;
+  try{ fb.scrollIntoView({behavior:"smooth",block:"nearest"}); }catch(e){}
+}
+function renderQuizEnd(){
+  const v=$("#quizView"); v.className="view quiz";
+  const r=Q.n?Q.score/Q.n:0, stars=r>=.9?3:r>=.7?2:r>=.5?1:0;
+  const msg=stars===3?"Nailed it!":stars===2?"Pretty good!":stars===1?"Not bad!":"Keep going!";
+  const missed=[...new Set(Q.missed)];
+  v.innerHTML=`<div class="qend"><div class="stars">${"★".repeat(stars)}${"☆".repeat(3-stars)}</div><div class="big">${Q.score}/${Q.n}</div><h2>${msg}</h2>
+    ${missed.length?`<p style="margin:0;font-size:13px;color:#6b5440">Review these. They'll come back more often:</p><ul>${missed.map(k=>`<li><b>${W[k].cat==="phrase"?"“"+label(k)+"”":label(k)}</b><br>${W[k].def}</li>`).join("")}</ul>`:""}
+    <div class="row"><button class="btn" type="button" id="qAgain">Play again</button><button class="btn ghost" type="button" id="qMenu">Menu</button></div></div>`;
+  $("#qAgain").onclick=startQuiz; $("#qMenu").onclick=()=>showView("menu");
+  if(stars>=2) say(msg);
+}
+
+/* ---------- boot ---------- */
+function start(data){
+  for(const k of Object.keys(found)) if(!SC[k]) delete found[k];
+  if(!LEVELS.some(L=>L.n===level)) level=1;
+  S=(data&&Array.isArray(data.story)&&Array.isArray(data.things)&&(!data.sc||SC[data.sc]))?data:fresh();
+  if(S.playing){ S.playing=false; } if(S.sc&&S.node&&!S.ended&&!S.narr) S.narr={s:SC[S.sc].nodes[S.node].ask,kind:"q"};
+  S.things=S.things.filter(t=>!t.gone); S.things.forEach(t=>{t.pose=null;t.frame=0;t.mouth=null;});
+  uid=Math.max(0,...S.things.map(t=>t.id),...S.hist.flatMap(h=>h.things.map(t=>t.id)));
+  booting=true; render(); booting=false;
+  rxAddStory();
+  showView("menu");
+  let seen=null; try{ seen=localStorage.getItem("sc-intro"); }catch(e){ seen="1"; }
+  if(!seen) showIntro(0);
+}
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
